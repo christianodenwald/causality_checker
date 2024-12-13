@@ -19,7 +19,7 @@ class StructuralEquationModel:
     def __init__(self):
         self.variables = {}
 
-    def add_variable(self, variable):
+    def add_variable(self, variable:Variable):
         self.variables[variable.name] = variable
 
     def set_equation(self, variable_name, equation):

@@ -1,4 +1,5 @@
 import copy, itertools
+from HP2005 import all_splits_with_mandatory_element
 
 
 def generate_vignettes():
@@ -42,7 +43,7 @@ def powerset(iterable):
     return list(itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(len(s) + 1)))
 
 
-def check_causality_H2015(vignette, cause_variable, cause_value, effect_variable, effect_value):
+def check_causality(theory, vignette, cause_variable, cause_value, effect_variable, effect_value):
     # only works for single conjuncts for now, both for cause and effect
 
     ### preparation
@@ -53,37 +54,51 @@ def check_causality_H2015(vignette, cause_variable, cause_value, effect_variable
 
     ### AC1 is implied
 
-    ### AC2am
-    x_prime = None
-    for x in vignette['value_ranges'][cause_index]:
-        if x != effect_value:
-            x_prime = x
+    if theory == 'HP2015':
+        ### AC2am
+        x_prime = None
+        for x in vignette['value_ranges'][cause_index]:
+            if x != effect_value:
+                x_prime = x
 
-    for subset_w in powerset(endo_variable_index):
-        for i in exo_variable_index:
-            vignette['current_values'][i] = vignette['initial_values'][i]
-        for i in endo_variable_index:
-            vignette['current_values'][i] = None
-        # print(subset_w)
-        # set X=x' and W=w'
-        for i in subset_w:
-            vignette['current_values'][i] = vignette['initial_values'][i]
-        vignette['current_values'][cause_index] = x_prime
-        # propagate with newly set values
-        for i in endo_variable_index:
-            if i not in subset_w:
-                vignette['current_values'][i] = int(vignette['structural_equations'][i]())
-        if vignette['current_values'][effect_index] != effect_value:
-            return True
-    return False
+        # TODO powerset is not enough
+        for subset_w, subset_z in enumerate(all_splits_with_mandatory_element(range(len(vignette['variables'])))):  # check different settings w'
+            for i in exo_variable_index:    # set exo variables
+                vignette['current_values'][i] = vignette['initial_values'][i]
+            for i in endo_variable_index:   # clear endo variables; not necessary
+                vignette['current_values'][i] = None
+            # set X=x' and W=w'
+            for i in subset_w:
+                vignette['current_values'][i] = vignette['initial_values'][i]
+            vignette['current_values'][cause_index] = x_prime
+            # propagate with newly set values
+            for i in endo_variable_index:
+                if i not in subset_w:
+                    vignette['current_values'][i] = int(vignette['structural_equations'][i]())
+            if vignette['current_values'][effect_index] != effect_value:
+                return True
+        return False
+
+    elif theory == 'HP2015':
+        pass
+
+    else:
+        raise ValueError('Invalid Theory')
+
+
+
+
+
+
 
 
 if __name__ == '__main__':
     ff_disj, ff_conj, bottle_shatters = generate_vignettes()
 
-    check_causality_H2015(ff_conj, 'ML', 1, 'FF', 1)  # True
-    check_causality_H2015(ff_disj, 'ML', 1, 'FF', 1)  # False
-    check_causality_H2015(bottle_shatters, 'ST', 1, 'BS', 1)  # True
-    check_causality_H2015(bottle_shatters, 'BT', 1, 'BS', 1)  # False
+    check_causality('HP2005', ff_conj, 'ML', 1, 'FF', 1)  # True
+    check_causality('HP2005', ff_disj, 'ML', 1, 'FF', 1)  # False
+    check_causality('HP2005', bottle_shatters, 'ST', 1, 'BS', 1)  # True
+    check_causality('HP2005', bottle_shatters, 'BT', 1, 'BS', 1)  # False
+
 
 print()

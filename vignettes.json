@@ -1,130 +1,232 @@
 {
   "vignettes": [
     {
-      "id": "01_lf",
-      "title": "Lightning and Fire",
-      "description": "Lightning strikes a tree, causing a fire.",
+      "id": "01_ff_disj",
+      "title": "Disjunctive Forest Fire",
+      "description": "A match lit or a lightning strike causes a forest fire.",
       "variables": {
+        "M": {
+          "description": "Match lit",
+          "range": [0, 1],
+          "notes": "1 if the match is lit, 0 if not"
+        },
         "L": {
-          "description": "Lightning strikes",
+          "description": "Lightning strike",
           "range": [0, 1],
           "notes": "1 if lightning strikes, 0 if not"
         },
-        "F": {
-          "description": "Fire starts",
+        "FF": {
+          "description": "Forest fire",
           "range": [0, 1],
-          "notes": "1 if fire starts, 0 if not"
+          "notes": "1 if forest fire occurs, 0 if not"
         }
       },
       "structural_equations": {
-        "F": "L"
+        "FF": "M or L"
       },
-      "notes": "In this simple scenario, the fire is caused directly by the lightning strike."
+      "notes": "The forest fire occurs if either the match is lit or a lightning strike happens."
     },
     {
-      "id": "02_bg",
-      "title": "Backup Generator",
-      "description": "A power failure causes a backup generator to activate, supplying power.",
+      "id": "02_ff_conj",
+      "title": "Conjunctive Forest Fire",
+      "description": "A forest fire occurs only if both a match is lit and a lightning strike occur.",
       "variables": {
-        "P": {
-          "description": "Primary power supply",
+        "M": {
+          "description": "Match lit",
           "range": [0, 1],
-          "notes": "1 if working, 0 if failed"
+          "notes": "1 if the match is lit, 0 if not"
         },
-        "B": {
-          "description": "Backup generator activates",
-          "range": [0, 1],
-          "notes": "1 if activated, 0 if not"
-        },
-        "E": {
-          "description": "Electricity supply",
-          "range": [0, 1],
-          "notes": "1 if available, 0 if not"
-        }
-      },
-      "structural_equations": {
-        "B": "1 - P",
-        "E": "P + B - (P * B)"
-      },
-      "notes": "If the primary power supply fails, the backup generator activates, ensuring electricity."
-    },
-    {
-      "id": "03_ff",
-      "title": "Forest Fire",
-      "description": "A forest fire can be caused by either a lightning strike or an unattended campfire.",
-      "variables": {
         "L": {
-          "description": "Lightning strikes",
+          "description": "Lightning strike",
           "range": [0, 1],
           "notes": "1 if lightning strikes, 0 if not"
         },
-        "C": {
-          "description": "Campfire left unattended",
+        "FF": {
+          "description": "Forest fire",
           "range": [0, 1],
-          "notes": "1 if unattended, 0 if not"
-        },
-        "F": {
-          "description": "Forest fire starts",
-          "range": [0, 1],
-          "notes": "1 if forest fire starts, 0 if not"
+          "notes": "1 if forest fire occurs, 0 if not"
         }
       },
       "structural_equations": {
-        "F": "max(L, C)"
+        "FF": "M and L"
       },
-      "notes": "The forest fire occurs if either a lightning strike or an unattended campfire occurs."
+      "notes": "The forest fire occurs only if both a match is lit and a lightning strike happen together."
     },
     {
-      "id": "04_tp",
-      "title": "Teamwork on a Project",
-      "description": "Two team members, Alice and Bob, can complete a project. The project is completed if at least one of them works on it.",
+      "id": "03_bottle_shatters",
+      "title": "Bottle Shattering Scenario",
+      "description": "Suzy and Billy throw rocks at an intact bottle. The bottle shatters if either Suzy's rock or Billy's rock hits it.",
+      "variables": {
+        "ST": {
+          "description": "Suzy throws a rock",
+          "range": [0, 1],
+          "notes": "1 if Suzy throws a rock, 0 if not"
+        },
+        "BT": {
+          "description": "Billy throws a rock",
+          "range": [0, 1],
+          "notes": "1 if Billy throws a rock, 0 if not"
+        },
+        "SH": {
+          "description": "Suzy's rock hits the intact bottle",
+          "range": [0, 1],
+          "notes": "1 if Suzy's rock hits the intact bottle, 0 if not"
+        },
+        "BH": {
+          "description": "Billy's rock hits the intact bottle",
+          "range": [0, 1],
+          "notes": "1 if Billy's rock hits the intact bottle, 0 if not"
+        },
+        "BS": {
+          "description": "Bottle shatters",
+          "range": [0, 1],
+          "notes": "1 if the bottle shatters, 0 if not"
+        }
+      },
+      "structural_equations": {
+        "SH": "ST",
+        "BH": "BT and not SH",
+        "BS": "SH or BH"
+      },
+      "notes": "Suzy's rock always hits the bottle if she throws it. Billy's rock only hits the bottle if he throws it and Suzy's rock does not hit it. The bottle shatters if either Suzy's rock or Billy's rock hits it."
+    },
+    {
+      "id": "04_loader_example",
+      "title": "Loader Example",
+      "description": "A prisoner dies if either A loads B’s gun and B shoots, or C loads and shoots his own gun.",
       "variables": {
         "A": {
-          "description": "Alice works on the project",
+          "description": "A loads B's gun",
           "range": [0, 1],
-          "notes": "1 if Alice works, 0 if not"
+          "notes": "1 if A loads B's gun, 0 if not"
         },
         "B": {
-          "description": "Bob works on the project",
+          "description": "B shoots his gun",
           "range": [0, 1],
-          "notes": "1 if Bob works, 0 if not"
+          "notes": "1 if B shoots his gun, 0 if not"
         },
-        "P": {
-          "description": "Project completed",
+        "C": {
+          "description": "C loads and shoots his gun",
           "range": [0, 1],
-          "notes": "1 if completed, 0 if not"
+          "notes": "1 if C loads and shoots his gun, 0 if not"
+        },
+        "D": {
+          "description": "Prisoner dies",
+          "range": [0, 1],
+          "notes": "1 if the prisoner dies, 0 if not"
         }
       },
       "structural_equations": {
-        "P": "max(A, B)"
+        "D": "(A and B) or C"
       },
-      "notes": "The project is completed if either Alice or Bob (or both) work on it."
+      "notes": "The prisoner dies if either A loads B's gun and B shoots, or if C loads and shoots his own gun."
     },
     {
-      "id": "05_od",
-      "title": "Overdetermination by Arsonists",
-      "description": "Two arsonists independently set fire to a house. The house burns down regardless of who acted first.",
+      "id": "05_overdet_voting",
+      "title": "Overdetermination in Voting",
+      "description": "Five agents vote, and a majority of 3 is required for the proposal to pass. A, B, and C vote yes, while D and E vote no.",
       "variables": {
-        "A1": {
-          "description": "Arsonist 1 sets fire",
+        "A": {
+          "description": "A votes yes",
           "range": [0, 1],
-          "notes": "1 if Arsonist 1 sets fire, 0 if not"
-        },
-        "A2": {
-          "description": "Arsonist 2 sets fire",
-          "range": [0, 1],
-          "notes": "1 if Arsonist 2 sets fire, 0 if not"
+          "notes": "1 if A votes yes, 0 if not"
         },
         "B": {
-          "description": "House burns down",
+          "description": "B votes yes",
           "range": [0, 1],
-          "notes": "1 if house burns down, 0 if not"
+          "notes": "1 if B votes yes, 0 if not"
+        },
+        "C": {
+          "description": "C votes yes",
+          "range": [0, 1],
+          "notes": "1 if C votes yes, 0 if not"
+        },
+        "D": {
+          "description": "D votes yes",
+          "range": [0, 1],
+          "notes": "1 if D votes yes, 0 if not"
+        },
+        "E": {
+          "description": "E votes yes",
+          "range": [0, 1],
+          "notes": "1 if E votes yes, 0 if not"
+        },
+        "P": {
+          "description": "Proposal passes",
+          "range": [0, 1],
+          "notes": "1 if the proposal passes, 0 if not"
         }
       },
       "structural_equations": {
-        "B": "max(A1, A2)"
+        "P": "(A + B + C + D + E) >= 3"
       },
-      "notes": "This scenario demonstrates overdetermination, where the house burns down even if only one arsonist acts."
+      "notes": "The proposal passes if at least 3 agents vote yes. A, B, and C voted yes, so the proposal passes. This creates an overdetermination scenario where no single vote is strictly necessary."
+    },
+    {
+      "id": "06_switch_scenario",
+      "title": "Switch Scenario",
+      "description": "Flipper flips a switch to change the train's trajectory to the right track. If Flipper had not flipped the switch, the train would have taken the left track. The train's arrival depends on the track it takes.",
+      "variables": {
+        "F": {
+          "description": "Flipper flips the switch",
+          "range": [0, 1],
+          "notes": "1 if Flipper flips the switch, 0 if not"
+        },
+        "RT": {
+          "description": "Train takes the right track",
+          "range": [0, 1],
+          "notes": "1 if the train takes the right track, 0 if not"
+        },
+        "LT": {
+          "description": "Train takes the left track",
+          "range": [0, 1],
+          "notes": "1 if the train takes the left track, 0 if not"
+        },
+        "A": {
+          "description": "Train arrives at the destination",
+          "range": [0, 1],
+          "notes": "1 if the train arrives, 0 if not"
+        }
+      },
+      "structural_equations": {
+        "RT": "F",
+        "LT": "not F",
+        "A": "RT or LT"
+      },
+      "notes": "The train arrives at its destination regardless of which track it takes, but the track is determined by whether Flipper flips the switch."
+    },
+    {
+  "id": "07_short_circuit",
+  "title": "Short Circuit",
+  "description": "The dislodgement of a boulder threatens to hit a hiker. However, the threat also provokes a reaction from the hiker – ducking – which prevents the threat from materializing.",
+  "variables": {
+    "BD": {
+      "description": "Boulder dislodges",
+      "range": [0, 1],
+      "notes": "1 if the boulder dislodges, 0 if not"
+    },
+    "B": {
+      "description": "Boulder rolls towards hiker",
+      "range": [0, 1],
+      "notes": "1 if the boulder rolls towards the hiker, 0 if not"
+    },
+    "D": {
+      "description": "Hiker ducks",
+      "range": [0, 1],
+      "notes": "1 if the hiker ducks, 0 if not"
+    },
+    "E": {
+      "description": "Hiker gets hit by boulder",
+      "range": [0, 1],
+      "notes": "1 if the hiker gets hit by the boulder, 0 if not"
     }
+  },
+  "structural_equations": {
+    "B": "BD",
+    "D": "BD",
+    "E": "B and not D"
+  },
+  "notes": "The dislodgement of the boulder directly causes it to roll toward the hiker and also provokes the hiker to duck. The hiker’s ducking prevents the boulder from hitting them."
+}
   ]
 }

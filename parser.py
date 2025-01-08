@@ -57,62 +57,30 @@ def parse_vignettes_and_queries(vignettes_json, queries_json):
 vignettes_json = {
     "vignettes": [
         {
-            "id": "v01-ff_disj",
-            "title": "Disjunctive Forest Fire",
-            "description": "A match lit or a lightning strike causes a forest fire.",
-            "variables": {
-                "M": {
-                    "description": "Match lit",
-                    "range": [0, 1],
-                    "notes": "1 if the match is lit, 0 if not"
-                },
-                "L": {
-                    "description": "Lightning strike",
-                    "range": [0, 1],
-                    "notes": "1 if lightning strikes, 0 if not"
-                },
-                "FF": {
-                    "description": "Forest fire",
-                    "range": [0, 1],
-                    "notes": "1 if forest fire occurs, 0 if not"
-                }
-            },
+            "id": "01_lf",
+            "variables": ["L", "F"],
+            "initial_values": [1, 1],
+            "current_values": [0, 1],
+            "value_ranges": [[0, 1], [0, 1]],
             "structural_equations": {
-                "FF": "M or L"
-            },
-            "notes": "The forest fire occurs if either the match is lit or a lightning strike happens."
+                "F": "L"
+            }
         }
-    ]
-}
-
-settings_json = {
-"initial_values": [
-    {
-      "setting_id": "s01-ff_disj-1",
-      "vignette_id": "v01-ff_disj",
-      "initial_values": {
-        "M": 0,
-        "L": 0,
-        "FF": 0
-      }
-    }
     ]
 }
 
 queries_json = {
     "queries": [
         {
-            "query_id": "q01-ff_disj-M_FF-1",
-            "vignette_id": "v01-ff_disj",
-            "setting_id": "s01-ff_disj-1",
+            "vignette_id": "01_lf",
             "query": {
-                "cause": "M",
-                "effect": "FF",
-                "question": "Is the match lit a cause of the forest fire?"
+                "cause": "L",
+                "effect": "F",
+                "question": "Is lightning a cause of the fire?"
             },
             "results": {
-                "HP2005": "Yes",
-                "HP2015": "Yes"
+                "HP2005": True,
+                "HP2015": True
             }
         }
     ]

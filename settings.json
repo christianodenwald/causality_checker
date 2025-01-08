@@ -1,135 +1,127 @@
 {
-  "queries": [
+  "initial_values": [
     {
-      "vignette_id": "01_lf",
-      "query": {
-        "cause": "L",
-        "effect": "F",
-        "question": "Is lightning a cause of the fire?"
-      },
-      "results": {
-        "HP2005": true,
-        "HP2015": true
+      "setting_id": "s01-ff_disj-1",
+      "vignette_id": "v01-ff_disj",
+      "initial_values": {
+        "M": 0,
+        "L": 0,
+        "FF": 0
       }
     },
     {
-      "vignette_id": "02_bg",
-      "query": {
-        "cause": "P",
-        "effect": "B",
-        "question": "Is the failure of the primary power supply a cause of the backup generator activation?"
-      },
-      "results": {
-        "HP2005": true,
-        "HP2015": true
+      "setting_id": "s02-ff_conj-1",
+      "vignette_id": "v02-ff_conj",
+      "initial_values": {
+        "M": 0,
+        "L": 0,
+        "FF": 0
       }
     },
     {
-      "vignette_id": "02_bg",
-      "query": {
-        "cause": "P",
-        "effect": "E",
-        "question": "Is the failure of the primary power supply a cause of electricity supply?"
-      },
-      "results": {
-        "HP2005": false,
-        "HP2015": false
+      "setting_id": "s03-bottle_shatters-1",
+      "vignette_id": "v03-bottle_shatters",
+      "initial_values": {
+        "ST": 0,
+        "BT": 0,
+        "SH": 0,
+        "BH": 0,
+        "BS": 0
       }
     },
     {
-      "vignette_id": "03_ff",
-      "query": {
-        "cause": "L",
-        "effect": "F",
-        "question": "Is lightning a cause of the forest fire?"
-      },
-      "results": {
-        "HP2005": true,
-        "HP2015": true
+      "setting_id": "s03-bottle_shatters-2",
+      "vignette_id": "v03-bottle_shatters",
+      "initial_values": {
+        "ST": 1,
+        "BT": 0,
+        "SH": 1,
+        "BH": 0,
+        "BS": 1
       }
     },
     {
-      "vignette_id": "03_ff",
-      "query": {
-        "cause": "C",
-        "effect": "F",
-        "question": "Is an unattended campfire a cause of the forest fire?"
-      },
-      "results": {
-        "HP2005": true,
-        "HP2015": true
+      "setting_id": "s03-bottle_shatters-3",
+      "vignette_id": "v03-bottle_shatters",
+      "initial_values": {
+        "ST": 1,
+        "BT": 1,
+        "SH": 1,
+        "BH": 0,
+        "BS": 1
       }
     },
     {
-      "vignette_id": "04_tp",
-      "query": {
-        "cause": "A",
-        "effect": "P",
-        "question": "Is Alice working on the project a cause of its completion?"
-      },
-      "results": {
-        "HP2005": true,
-        "HP2015": true
+      "setting_id": "s03-bottle_shatters-4",
+      "vignette_id": "v03-bottle_shatters",
+      "initial_values": {
+        "ST": 0,
+        "BT": 1,
+        "SH": 0,
+        "BH": 1,
+        "BS": 1
       }
     },
     {
-      "vignette_id": "04_tp",
-      "query": {
-        "cause": "B",
-        "effect": "P",
-        "question": "Is Bob working on the project a cause of its completion?"
-      },
-      "results": {
-        "HP2005": true,
-        "HP2015": true
+      "setting_id": "s04-loader_example-1",
+      "vignette_id": "v04-loader_example",
+      "initial_values": {
+        "A": 0,
+        "B": 0,
+        "C": 0,
+        "D": 0
       }
     },
     {
-      "vignette_id": "04_tp",
-      "query": {
-        "cause": "A AND B",
-        "effect": "P",
-        "question": "Are Alice and Bob working together a cause of the project's completion?"
-      },
-      "results": {
-        "HP2005": true,
-        "HP2015": true
+      "setting_id": "s05-overdet_voting-1",
+      "vignette_id": "v05-overdet_voting",
+      "initial_values": {
+        "A": 1,
+        "B": 1,
+        "C": 1,
+        "D": 0,
+        "E": 0,
+        "P": 1
       }
     },
     {
-      "vignette_id": "05_od",
-      "query": {
-        "cause": "A1",
-        "effect": "B",
-        "question": "Is Arsonist 1 setting fire a cause of the house burning down?"
-      },
-      "results": {
-        "HP2005": true,
-        "HP2015": false
+      "setting_id": "s06-switch_scenario-1",
+      "vignette_id": "v06-switch_scenario",
+      "initial_values": {
+        "F": 1,
+        "RT": 1,
+        "LT": 0,
+        "A": 1
       }
     },
     {
-      "vignette_id": "05_od",
-      "query": {
-        "cause": "A2",
-        "effect": "B",
-        "question": "Is Arsonist 2 setting fire a cause of the house burning down?"
-      },
-      "results": {
-        "HP2005": true,
-        "HP2015": false
+      "setting_id": "s07-short_circuit-1",
+      "vignette_id": "v07-short_circuit",
+      "initial_values": {
+        "BD": 0,
+        "B": 0,
+        "D": 0,
+        "E": 0
       }
     },
     {
-      "vignette_id": "05_od",
-      "query": {
-        "cause": "A1 AND A2",
-        "effect": "B",
-        "question": "Are both Arsonist 1 and Arsonist 2 setting fire together a cause of the house burning down?"
-      },
-      "results": {
-        "HP2005": true,
-        "HP2015": true
+      "setting_id": "s07-short_circuit-2",
+      "vignette_id": "v07-short_circuit",
+      "initial_values": {
+        "BD": 1,
+        "B": 1,
+        "D": 1,
+        "E": 0
+      }
+    },
+    {
+      "setting_id": "s07-short_circuit-3",
+      "vignette_id": "v07-short_circuit",
+      "initial_values": {
+        "BD": 1,
+        "B": 1,
+        "D": 0,
+        "E": 1
       }
     }
   ]

@@ -1,0 +1,130 @@
+{
+  "vignettes": [
+    {
+      "id": "01_lf",
+      "title": "Lightning and Fire",
+      "description": "Lightning strikes a tree, causing a fire.",
+      "variables": {
+        "L": {
+          "description": "Lightning strikes",
+          "range": [0, 1],
+          "notes": "1 if lightning strikes, 0 if not"
+        },
+        "F": {
+          "description": "Fire starts",
+          "range": [0, 1],
+          "notes": "1 if fire starts, 0 if not"
+        }
+      },
+      "structural_equations": {
+        "F": "L"
+      },
+      "notes": "In this simple scenario, the fire is caused directly by the lightning strike."
+    },
+    {
+      "id": "02_bg",
+      "title": "Backup Generator",
+      "description": "A power failure causes a backup generator to activate, supplying power.",
+      "variables": {
+        "P": {
+          "description": "Primary power supply",
+          "range": [0, 1],
+          "notes": "1 if working, 0 if failed"
+        },
+        "B": {
+          "description": "Backup generator activates",
+          "range": [0, 1],
+          "notes": "1 if activated, 0 if not"
+        },
+        "E": {
+          "description": "Electricity supply",
+          "range": [0, 1],
+          "notes": "1 if available, 0 if not"
+        }
+      },
+      "structural_equations": {
+        "B": "1 - P",
+        "E": "P + B - (P * B)"
+      },
+      "notes": "If the primary power supply fails, the backup generator activates, ensuring electricity."
+    },
+    {
+      "id": "03_ff",
+      "title": "Forest Fire",
+      "description": "A forest fire can be caused by either a lightning strike or an unattended campfire.",
+      "variables": {
+        "L": {
+          "description": "Lightning strikes",
+          "range": [0, 1],
+          "notes": "1 if lightning strikes, 0 if not"
+        },
+        "C": {
+          "description": "Campfire left unattended",
+          "range": [0, 1],
+          "notes": "1 if unattended, 0 if not"
+        },
+        "F": {
+          "description": "Forest fire starts",
+          "range": [0, 1],
+          "notes": "1 if forest fire starts, 0 if not"
+        }
+      },
+      "structural_equations": {
+        "F": "max(L, C)"
+      },
+      "notes": "The forest fire occurs if either a lightning strike or an unattended campfire occurs."
+    },
+    {
+      "id": "04_tp",
+      "title": "Teamwork on a Project",
+      "description": "Two team members, Alice and Bob, can complete a project. The project is completed if at least one of them works on it.",
+      "variables": {
+        "A": {
+          "description": "Alice works on the project",
+          "range": [0, 1],
+          "notes": "1 if Alice works, 0 if not"
+        },
+        "B": {
+          "description": "Bob works on the project",
+          "range": [0, 1],
+          "notes": "1 if Bob works, 0 if not"
+        },
+        "P": {
+          "description": "Project completed",
+          "range": [0, 1],
+          "notes": "1 if completed, 0 if not"
+        }
+      },
+      "structural_equations": {
+        "P": "max(A, B)"
+      },
+      "notes": "The project is completed if either Alice or Bob (or both) work on it."
+    },
+    {
+      "id": "05_od",
+      "title": "Overdetermination by Arsonists",
+      "description": "Two arsonists independently set fire to a house. The house burns down regardless of who acted first.",
+      "variables": {
+        "A1": {
+          "description": "Arsonist 1 sets fire",
+          "range": [0, 1],
+          "notes": "1 if Arsonist 1 sets fire, 0 if not"
+        },
+        "A2": {
+          "description": "Arsonist 2 sets fire",
+          "range": [0, 1],
+          "notes": "1 if Arsonist 2 sets fire, 0 if not"
+        },
+        "B": {
+          "description": "House burns down",
+          "range": [0, 1],
+          "notes": "1 if house burns down, 0 if not"
+        }
+      },
+      "structural_equations": {
+        "B": "max(A1, A2)"
+      },
+      "notes": "This scenario demonstrates overdetermination, where the house burns down even if only one arsonist acts."
+    }
+  ]
+}

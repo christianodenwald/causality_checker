@@ -1,0 +1,136 @@
+{
+  "queries": [
+    {
+      "vignette_id": "01_lf",
+      "query": {
+        "cause": "L",
+        "effect": "F",
+        "question": "Is lightning a cause of the fire?"
+      },
+      "results": {
+        "HP2005": true,
+        "HP2015": true
+      }
+    },
+    {
+      "vignette_id": "02_bg",
+      "query": {
+        "cause": "P",
+        "effect": "B",
+        "question": "Is the failure of the primary power supply a cause of the backup generator activation?"
+      },
+      "results": {
+        "HP2005": true,
+        "HP2015": true
+      }
+    },
+    {
+      "vignette_id": "02_bg",
+      "query": {
+        "cause": "P",
+        "effect": "E",
+        "question": "Is the failure of the primary power supply a cause of electricity supply?"
+      },
+      "results": {
+        "HP2005": false,
+        "HP2015": false
+      }
+    },
+    {
+      "vignette_id": "03_ff",
+      "query": {
+        "cause": "L",
+        "effect": "F",
+        "question": "Is lightning a cause of the forest fire?"
+      },
+      "results": {
+        "HP2005": true,
+        "HP2015": true
+      }
+    },
+    {
+      "vignette_id": "03_ff",
+      "query": {
+        "cause": "C",
+        "effect": "F",
+        "question": "Is an unattended campfire a cause of the forest fire?"
+      },
+      "results": {
+        "HP2005": true,
+        "HP2015": true
+      }
+    },
+    {
+      "vignette_id": "04_tp",
+      "query": {
+        "cause": "A",
+        "effect": "P",
+        "question": "Is Alice working on the project a cause of its completion?"
+      },
+      "results": {
+        "HP2005": true,
+        "HP2015": true
+      }
+    },
+    {
+      "vignette_id": "04_tp",
+      "query": {
+        "cause": "B",
+        "effect": "P",
+        "question": "Is Bob working on the project a cause of its completion?"
+      },
+      "results": {
+        "HP2005": true,
+        "HP2015": true
+      }
+    },
+    {
+      "vignette_id": "04_tp",
+      "query": {
+        "cause": "A AND B",
+        "effect": "P",
+        "question": "Are Alice and Bob working together a cause of the project's completion?"
+      },
+      "results": {
+        "HP2005": true,
+        "HP2015": true
+      }
+    },
+    {
+      "vignette_id": "05_od",
+      "query": {
+        "cause": "A1",
+        "effect": "B",
+        "question": "Is Arsonist 1 setting fire a cause of the house burning down?"
+      },
+      "results": {
+        "HP2005": true,
+        "HP2015": false
+      }
+    },
+    {
+      "vignette_id": "05_od",
+      "query": {
+        "cause": "A2",
+        "effect": "B",
+        "question": "Is Arsonist 2 setting fire a cause of the house burning down?"
+      },
+      "results": {
+        "HP2005": true,
+        "HP2015": false
+      }
+    },
+    {
+      "vignette_id": "05_od",
+      "query": {
+        "cause": "A1 AND A2",
+        "effect": "B",
+        "question": "Are both Arsonist 1 and Arsonist 2 setting fire together a cause of the house burning down?"
+      },
+      "results": {
+        "HP2005": true,
+        "HP2015": true
+      }
+    }
+  ]
+}

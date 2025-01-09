@@ -29,7 +29,7 @@ def generate_vignettes():
                        'structural_equations': [None] * 5}
 
     bottle_shatters['structural_equations'][2] = lambda: bottle_shatters['current_values'][0]
-    bottle_shatters['structural_equations'][3] = lambda: bottle_shatters['current_values'][1] or not \
+    bottle_shatters['structural_equations'][3] = lambda: bottle_shatters['current_values'][1] and not \
         bottle_shatters['current_values'][2]
     bottle_shatters['structural_equations'][4] = lambda: bottle_shatters['current_values'][2] or \
                                                          bottle_shatters['current_values'][3]
@@ -87,8 +87,6 @@ def check_causality(theory, vignette, cause_variable, cause_value, effect_variab
             if x != effect_value:
                 x_prime = x
 
-        # for subset_w in powerset(endo_variable_index): # todo explicitly exclude cause (cause could be endogenous)
-        # for subset_w in powerset(set([i for i in range(len(vignette['variables'])) if i != cause_index])):
         for subset_w in powerset(set(variable_index)-{cause_index}):
             for i in exo_variable_index: # set exo variables to initial values
                 vignette['current_values'][i] = vignette['initial_values'][i]
@@ -113,24 +111,6 @@ def check_causality(theory, vignette, cause_variable, cause_value, effect_variab
         else:
             print(f'{cause_variable}={cause_value} is NOT an actual cause of {effect_variable}={effect_value}')
             print('====================\n')
-
-        # # TODO powerset is not enough
-        # for subset_w, subset_z in all_splits_with_mandatory_element(range(len(vignette['variables'])), cause_index):  # check different settings w'
-        #     for i in exo_variable_index:    # set exo variables
-        #         vignette['current_values'][i] = vignette['initial_values'][i]
-        #     for i in endo_variable_index:   # clear endo variables; not necessary
-        #         vignette['current_values'][i] = None
-        #     # set X=x' and W=w'
-        #     for i in subset_w:
-        #         vignette['current_values'][i] = vignette['initial_values'][i]
-        #     vignette['current_values'][cause_index] = x_prime
-        #     # propagate with newly set values
-        #     for i in endo_variable_index:
-        #         if i not in subset_w:
-        #             vignette['current_values'][i] = int(vignette['structural_equations'][i]())
-        #     if vignette['current_values'][effect_index] != effect_value:
-        #         return True
-        # return False
 
     elif theory == 'HP2005':
         pass

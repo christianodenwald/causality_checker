@@ -71,6 +71,7 @@ def check_causality(theory, vignette, cause_variable, cause_value, effect_variab
     ### preparation
     endo_variable_index = [index for index, item in enumerate(vignette['structural_equations']) if item is not None]
     exo_variable_index = [index for index, item in enumerate(vignette['structural_equations']) if item == None]
+    variable_index = list(range(len(vignette['variables'])))
     cause_index = vignette['variables'].index(cause_variable)
     effect_index = vignette['variables'].index(effect_variable)
 
@@ -86,12 +87,14 @@ def check_causality(theory, vignette, cause_variable, cause_value, effect_variab
             if x != effect_value:
                 x_prime = x
 
-        for subset_w in powerset(endo_variable_index):
-            for i in exo_variable_index:
+        # for subset_w in powerset(endo_variable_index): # todo explicitly exclude cause (cause could be endogenous)
+        # for subset_w in powerset(set([i for i in range(len(vignette['variables'])) if i != cause_index])):
+        for subset_w in powerset(set(variable_index)-{cause_index}):
+            for i in exo_variable_index: # set exo variables to initial values
                 vignette['current_values'][i] = vignette['initial_values'][i]
-            for i in endo_variable_index:
+            for i in endo_variable_index: # reset endo variables
                 vignette['current_values'][i] = None
-            # print(subset_w)
+            # print(subset_w) # uncomment to see subsets
             # set X=x' and W=w'
             for i in subset_w:
                 vignette['current_values'][i] = vignette['initial_values'][i]
@@ -102,11 +105,14 @@ def check_causality(theory, vignette, cause_variable, cause_value, effect_variab
                     vignette['current_values'][i] = int(vignette['structural_equations'][i]())
             if vignette['current_values'][effect_index] != effect_value:
                 # return True
-                print(f'{cause_variable}={cause_value} IS an actual cause of {effect_variable}={effect_value}\n')
+                print(f'{cause_variable}={cause_value} IS an actual cause of {effect_variable}={effect_value}')
+                print(f'Witness: W={[vignette["variables"][i] for i in subset_w]}, w={[vignette["current_values"][i] for i in subset_w]}, x\'={x_prime}')
+                print('====================\n')
                 break
         # return False
         else:
-            print(f'{cause_variable}={cause_value} is NOT an actual cause of {effect_variable}={effect_value}\n')
+            print(f'{cause_variable}={cause_value} is NOT an actual cause of {effect_variable}={effect_value}')
+            print('====================\n')
 
         # # TODO powerset is not enough
         # for subset_w, subset_z in all_splits_with_mandatory_element(range(len(vignette['variables'])), cause_index):  # check different settings w'

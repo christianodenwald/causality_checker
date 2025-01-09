@@ -1,5 +1,7 @@
 import copy, itertools
-# from HP2005 import all_splits_with_mandatory_element
+
+from data import example_data
+from data.example_data import *
 
 
 def generate_vignettes():
@@ -36,6 +38,45 @@ def generate_vignettes():
 
     return [ff_disj, ff_conj, bottle_shatters]
 
+def generate_vignettes_from_json(vignettes_json):
+    vignettes = []
+
+    for vignette_data in vignettes_json['vignettes']:
+        vignette = {
+            'vignette_id': vignette_data['id'],
+            'name': vignette_data['title'],
+            'variables': list(vignette_data['variables'].keys()),
+            'initial_values': [0] * len(vignette_data['variables']),
+            'current_values': [None] * len(vignette_data['variables']),
+            'value_ranges': [set(var['range']) for var in vignette_data['variables'].values()],
+            'structural_equations': [None] * len(vignette_data['variables']),
+        }
+
+        for var, equation in vignette_data['structural_equations'].items():
+            var_index = vignette['variables'].index(var)
+            vignette['structural_equations'][var_index] = lambda: eval(equation, {}, {
+                key: vignette['current_values'][vignette['variables'].index(key)]
+                for key in vignette['variables']
+            })
+
+        for var, var_info in vignette_data['variables'].items():
+            var_index = vignette['variables'].index(var)
+            vignette['initial_values'][var_index] = var_info.get('default', 0)
+
+        vignettes.append(vignette)
+
+    return vignettes
+
+
+def get_initial_values_from_json(settings_json, vignette_id):
+    for setting in settings_json['initial_values']:
+        if setting['vignette_id'] == vignette_id:
+            return setting['initial_values']
+    return None
+
+
+def get_queries_from_json(queries_json, vignette_id):
+    return [query for query in queries_json['queries'] if query['vignette_id'] == vignette_id]
 
 ###################################
 
@@ -120,17 +161,36 @@ def check_causality(theory, vignette, cause_variable, cause_value, effect_variab
 
 
 
-def evaluate_on_all_vignettes(theory):
-    check_causality(theory, ff_conj, 'ML', 1, 'FF', 1)  # True
-    check_causality(theory, ff_disj, 'ML', 1, 'FF', 1)  # False
-    check_causality(theory, bottle_shatters, 'ST', 1, 'BS', 1)  # True
-    check_causality(theory, bottle_shatters, 'BT', 1, 'BS', 1)  # False
+# def evaluate_on_all_vignettes(theory):
+#     check_causality(theory, ff_conj, 'ML', 1, 'FF', 1)  # True
+#     check_causality(theory, ff_disj, 'ML', 1, 'FF', 1)  # False
+#     check_causality(theory, bottle_shatters, 'ST', 1, 'BS', 1)  # True
+#     check_causality(theory, bottle_shatters, 'BT', 1, 'BS', 1)  # False
+
+def evaluate_queries(vignettes, settings_json, queries_json):
+    for vignette in vignettes:
+        initial_values = get_initial_values_from_json(settings_json, vignette['vignette_id'])
+        if initial_values:
+            vignette['initial_values'] = [
+                initial_values.get(var, 0) for var in vignette['variables']
+            ]
+
+        queries = get_queries_from_json(queries_json, vignette['vignette_id'])
+        for query in queries:
+            check_causality(
+                'HP2015',
+                vignette,
+                query['query']['cause'],
+                vignette['initial_values'][vignette['variables'].index(query['query']['cause'])],
+                query['query']['effect'],
+                vignette['initial_values'][vignette['variables'].index(query['query']['effect'])]
+            )
 
 
 if __name__ == '__main__':
-    ff_disj, ff_conj, bottle_shatters = generate_vignettes()
-
-    evaluate_on_all_vignettes('HP2015')
-
+    # ff_disj, ff_conj, bottle_shatters = generate_vignettes()
+    vignettes = generate_vignettes_from_json(vignettes_json)
+    # evaluate_on_all_vignettes('HP2015')
+    evaluate_queries(vignettes, settings_json, queries_json)
 
 print()

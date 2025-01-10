@@ -1,158 +1,156 @@
-{
-  "queries": [
-    {
-      "query_id": "q01-ff_disj-M_FF-1",
-      "vignette_id": "v01-ff_disj",
-      "setting_id": "s01-ff_disj-1",
-      "query": {
-        "cause": { "M": 1 },
-        "effect": { "FF": 1 },
-        "question": "Is the match lit a cause of the forest fire?"
-      },
-      "results": {
-        "HP2005": 1,
-        "HP2015": 1
-      }
+[
+  {
+    "query_id": "q01-ff_disj-M_FF-1",
+    "vignette_id": "v01-ff_disj",
+    "setting_id": "s01-ff_disj-1",
+    "query": {
+      "cause": { "M": 1 },
+      "effect": { "FF": 1 },
+      "question": "Is the match lit a cause of the forest fire?"
     },
-    {
-      "query_id": "q01-ff_disj-L_FF-2",
-      "vignette_id": "v01-ff_disj",
-      "setting_id": "s01-ff_disj-1",
-      "query": {
-        "cause": { "L": 1 },
-        "effect": { "FF": 1 },
-        "question": "Is the lightning strike a cause of the forest fire?"
-      },
-      "results": {
-        "HP2005": 1,
-        "HP2015": 1
-      }
-    },
-    {
-      "query_id": "q02-ff_conj-M_L_FF-1",
-      "vignette_id": "v02-ff_conj",
-      "setting_id": "s02-ff_conj-1",
-      "query": {
-        "cause": { "M": 1, "L": 1 },
-        "effect": { "FF": 1 },
-        "question": "Are both the match lit and the lightning strike causes of the forest fire?"
-      },
-      "results": {
-        "HP2005": 1,
-        "HP2015": 1
-      }
-    },
-    {
-      "query_id": "q02-ff_conj-M_or_L_FF-2",
-      "vignette_id": "v02-ff_conj",
-      "setting_id": "s02-ff_conj-1",
-      "query": {
-        "cause": { "M": 0, "L": 0 },
-        "effect": { "FF": 0 },
-        "question": "Is either the match lit or the lightning strike a cause of the forest fire?"
-      },
-      "results": {
-        "HP2005": 0,
-        "HP2015": 0
-      }
-    },
-    {
-      "query_id": "q03-bottle_shatters-ST_BS-1",
-      "vignette_id": "v03-bottle_shatters",
-      "setting_id": "s03-bottle_shatters-1",
-      "query": {
-        "cause": { "ST": 1 },
-        "effect": { "BS": 1 },
-        "question": "Is Suzy throwing a rock a cause of the bottle shattering?"
-      },
-      "results": {
-        "HP2005": 1,
-        "HP2015": 1
-      }
-    },
-    {
-      "query_id": "q03-bottle_shatters-BT_BS-2",
-      "vignette_id": "v03-bottle_shatters",
-      "setting_id": "s03-bottle_shatters-1",
-      "query": {
-        "cause": { "BT": 1 },
-        "effect": { "BS": 1 },
-        "question": "Is Billy throwing a rock a cause of the bottle shattering?"
-      },
-      "results": {
-        "HP2005": 1,
-        "HP2015": 1
-      }
-    },
-    {
-      "query_id": "q04-loader_example-A_and_B_D-1",
-      "vignette_id": "v04-loader_example",
-      "setting_id": "s04-loader_example-1",
-      "query": {
-        "cause": { "A": 1, "B": 1 },
-        "effect": { "D": 1 },
-        "question": "Is A loading B's gun and B shooting it a cause of the prisoner’s death?"
-      },
-      "results": {
-        "HP2005": 1,
-        "HP2015": 1
-      }
-    },
-    {
-      "query_id": "q05-overdet_voting-A_and_B_and_C_P-1",
-      "vignette_id": "v05-overdet_voting",
-      "setting_id": "s05-overdet_voting-1",
-      "query": {
-        "cause": { "A": 1, "B": 1, "C": 1 },
-        "effect": { "P": 1 },
-        "question": "Are A, B, and C’s votes a cause of the proposal passing?"
-      },
-      "results": {
-        "HP2005": 1,
-        "HP2015": 1
-      }
-    },
-    {
-      "query_id": "q06-switch_scenario-F_A-1",
-      "vignette_id": "v06-switch_scenario",
-      "setting_id": "s06-switch_scenario-1",
-      "query": {
-        "cause": { "F": 1 },
-        "effect": { "A": 1 },
-        "question": "Is Flipper flipping the switch a cause of the train arriving?"
-      },
-      "results": {
-        "HP2005": 1,
-        "HP2015": 1
-      }
-    },
-    {
-      "query_id": "q07-short_circuit-BD_E-1",
-      "vignette_id": "v07-short_circuit",
-      "setting_id": "s07-short_circuit-1",
-      "query": {
-        "cause": { "BD": 1 },
-        "effect": { "E": 1 },
-        "question": "Is the boulder dislodging a cause of the hiker being hit by the boulder?"
-      },
-      "results": {
-        "HP2005": 1,
-        "HP2015": 0
-      }
-    },
-    {
-      "query_id": "q07-short_circuit-D_E-2",
-      "vignette_id": "v07-short_circuit",
-      "setting_id": "s07-short_circuit-1",
-      "query": {
-        "cause": { "D": 1 },
-        "effect": { "E": 1 },
-        "question": "Is the hiker ducking a cause of the boulder not hitting the hiker?"
-      },
-      "results": {
-        "HP2005": 1,
-        "HP2015": 1
-      }
+    "results": {
+      "HP2005": 1,
+      "HP2015": 1
     }
-  ]
-}
+  },
+  {
+    "query_id": "q01-ff_disj-L_FF-2",
+    "vignette_id": "v01-ff_disj",
+    "setting_id": "s01-ff_disj-1",
+    "query": {
+      "cause": { "L": 1 },
+      "effect": { "FF": 1 },
+      "question": "Is the lightning strike a cause of the forest fire?"
+    },
+    "results": {
+      "HP2005": 1,
+      "HP2015": 1
+    }
+  },
+  {
+    "query_id": "q02-ff_conj-M_L_FF-1",
+    "vignette_id": "v02-ff_conj",
+    "setting_id": "s02-ff_conj-1",
+    "query": {
+      "cause": { "M": 1, "L": 1 },
+      "effect": { "FF": 1 },
+      "question": "Are both the match lit and the lightning strike causes of the forest fire?"
+    },
+    "results": {
+      "HP2005": 1,
+      "HP2015": 1
+    }
+  },
+  {
+    "query_id": "q02-ff_conj-M_or_L_FF-2",
+    "vignette_id": "v02-ff_conj",
+    "setting_id": "s02-ff_conj-1",
+    "query": {
+      "cause": { "M": 0, "L": 0 },
+      "effect": { "FF": 0 },
+      "question": "Is either the match lit or the lightning strike a cause of the forest fire?"
+    },
+    "results": {
+      "HP2005": 0,
+      "HP2015": 0
+    }
+  },
+  {
+    "query_id": "q03-bottle_shatters-ST_BS-1",
+    "vignette_id": "v03-bottle_shatters",
+    "setting_id": "s03-bottle_shatters-1",
+    "query": {
+      "cause": { "ST": 1 },
+      "effect": { "BS": 1 },
+      "question": "Is Suzy throwing a rock a cause of the bottle shattering?"
+    },
+    "results": {
+      "HP2005": 1,
+      "HP2015": 1
+    }
+  },
+  {
+    "query_id": "q03-bottle_shatters-BT_BS-2",
+    "vignette_id": "v03-bottle_shatters",
+    "setting_id": "s03-bottle_shatters-1",
+    "query": {
+      "cause": { "BT": 1 },
+      "effect": { "BS": 1 },
+      "question": "Is Billy throwing a rock a cause of the bottle shattering?"
+    },
+    "results": {
+      "HP2005": 1,
+      "HP2015": 1
+    }
+  },
+  {
+    "query_id": "q04-loader_example-A_and_B_D-1",
+    "vignette_id": "v04-loader_example",
+    "setting_id": "s04-loader_example-1",
+    "query": {
+      "cause": { "A": 1, "B": 1 },
+      "effect": { "D": 1 },
+      "question": "Is A loading B's gun and B shooting it a cause of the prisoner’s death?"
+    },
+    "results": {
+      "HP2005": 1,
+      "HP2015": 1
+    }
+  },
+  {
+    "query_id": "q05-overdet_voting-A_and_B_and_C_P-1",
+    "vignette_id": "v05-overdet_voting",
+    "setting_id": "s05-overdet_voting-1",
+    "query": {
+      "cause": { "A": 1, "B": 1, "C": 1 },
+      "effect": { "P": 1 },
+      "question": "Are A, B, and C’s votes a cause of the proposal passing?"
+    },
+    "results": {
+      "HP2005": 1,
+      "HP2015": 1
+    }
+  },
+  {
+    "query_id": "q06-switch_scenario-F_A-1",
+    "vignette_id": "v06-switch_scenario",
+    "setting_id": "s06-switch_scenario-1",
+    "query": {
+      "cause": { "F": 1 },
+      "effect": { "A": 1 },
+      "question": "Is Flipper flipping the switch a cause of the train arriving?"
+    },
+    "results": {
+      "HP2005": 1,
+      "HP2015": 1
+    }
+  },
+  {
+    "query_id": "q07-short_circuit-BD_E-1",
+    "vignette_id": "v07-short_circuit",
+    "setting_id": "s07-short_circuit-1",
+    "query": {
+      "cause": { "BD": 1 },
+      "effect": { "E": 1 },
+      "question": "Is the boulder dislodging a cause of the hiker being hit by the boulder?"
+    },
+    "results": {
+      "HP2005": 1,
+      "HP2015": 0
+    }
+  },
+  {
+    "query_id": "q07-short_circuit-D_E-2",
+    "vignette_id": "v07-short_circuit",
+    "setting_id": "s07-short_circuit-1",
+    "query": {
+      "cause": { "D": 1 },
+      "effect": { "E": 1 },
+      "question": "Is the hiker ducking a cause of the boulder not hitting the hiker?"
+    },
+    "results": {
+      "HP2005": 1,
+      "HP2015": 1
+    }
+  }
+]

@@ -14,7 +14,8 @@ def generate_vignettes():
                'value_ranges': [{0, 1}, {0, 1}, {0, 1}, ],
                'structural_equations': [None, None, None]}
     ff_disj['structural_equations'][2] = lambda: ff_disj['current_values'][0] or ff_disj['current_values'][1]
-
+    # ff_disj['structural_equations'][2] = eval(f"lambda: ff_disj['current_values'][0] and ff_disj['current_values'][1]")
+    # problem: has to be agnostic to the actual name, like "ff_disj" here
     ### VIGNETTE 2
 
     ff_conj = copy.deepcopy(ff_disj)

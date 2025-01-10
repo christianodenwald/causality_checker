@@ -268,7 +268,7 @@ def check_causality(theory, vignette, query_json):
             vignette.propagate_set_values()
 
             # Update endogenous variables
-            vignette.update_values()
+            # vignette.update_values()
 
             # Check the effect
             if vignette.values[effect_variable] != effect_value:

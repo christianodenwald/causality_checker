@@ -1,3 +1,5 @@
+# TODO: check if new parser can handle all cases before this file is deleted
+
 # Input JSON-like data for structural equations
 vignette_json = {
     "id": "v01-ff_disj",

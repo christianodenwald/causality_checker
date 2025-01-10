@@ -1,7 +1,7 @@
 import copy, itertools
 
-from data import example_data
-from data.example_data import *
+# from data import example_data
+# from data.example_data import *
 
 
 def generate_vignettes():

@@ -161,11 +161,17 @@ def check_causality(theory, vignette, cause_variable, cause_value, effect_variab
 
 
 
-# def evaluate_on_all_vignettes(theory):
-#     check_causality(theory, ff_conj, 'ML', 1, 'FF', 1)  # True
-#     check_causality(theory, ff_disj, 'ML', 1, 'FF', 1)  # False
-#     check_causality(theory, bottle_shatters, 'ST', 1, 'BS', 1)  # True
-#     check_causality(theory, bottle_shatters, 'BT', 1, 'BS', 1)  # False
+def evaluate_on_all_vignettes(theory):
+    vignettes = generate_vignettes()
+    ff_conj = vignettes[0]
+    ff_disj = vignettes[1]
+    bottle_shatters = vignettes[2]
+    check_causality(theory, ff_conj, 'ML', 1, 'FF', 1)  # True
+    check_causality(theory, ff_disj, 'ML', 1, 'FF', 1)  # False
+    check_causality(theory, bottle_shatters, 'ST', 1, 'BS', 1)  # True
+    check_causality(theory, bottle_shatters, 'BT', 1, 'BS', 1)  # False
+
+
 
 def evaluate_queries(vignettes, settings_json, queries_json):
     for vignette in vignettes:
@@ -190,7 +196,7 @@ def evaluate_queries(vignettes, settings_json, queries_json):
 if __name__ == '__main__':
     # ff_disj, ff_conj, bottle_shatters = generate_vignettes()
     vignettes = generate_vignettes_from_json(vignettes_json)
-    # evaluate_on_all_vignettes('HP2015')
+    evaluate_on_all_vignettes('HP2015')
     evaluate_queries(vignettes, settings_json, queries_json)
 
 print()

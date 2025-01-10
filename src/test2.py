@@ -225,7 +225,7 @@ def check_causality(theory, vignette, query_json):
     :param effect_variable: The effect variable name.
     :param effect_value: The effect variable value.
     """
-    print(f"{vignette.title}: ")
+    print(f"{vignette.title} ", end='')
 
     cause = query_json["query"]["cause"]
     effect = query_json["query"]["effect"]
@@ -242,7 +242,8 @@ def check_causality(theory, vignette, query_json):
     ### AC1 is implied
 
     if theory == 'HP2015':
-        print(f"According to {theory}, ", end='')
+        print(f"(Theory: {theory})")
+        print(f"Query: {cause_variable}={cause_value} is actual cause of {effect_variable}={effect_value}")
 
         ### AC2am
         # Find x' (an alternative value for the cause variable)
@@ -267,18 +268,16 @@ def check_causality(theory, vignette, query_json):
             # vignette.set_value(cause_variable, x_prime)
             vignette.propagate_set_values()
 
-            # Update endogenous variables
-            # vignette.update_values()
-
             # Check the effect
             if vignette.values[effect_variable] != effect_value:
-                print(f"{cause_variable}={cause_value} IS an actual cause of {effect_variable}={effect_value}")
+                print('Evaluation: TRUE\t', end='')
                 print(f"Witness: W={list(subset_w)}, w={[vignette.values[var] for var in subset_w]}, x'={x_prime}")
-                print("====================\n")
                 break
         else:
-            print(f"{cause_variable}={cause_value} is NOT an actual cause of {effect_variable}={effect_value}")
-            print("====================\n")
+            print('Evaluation: FALSE')
+
+        print(f'Ground truth: {"TRUE" if query_json["results"][theory] else "FALSE"}\n')
+        print("====================\n")
 
     elif theory == 'HP2005':
         pass  # Implement if needed
@@ -296,8 +295,8 @@ query_json = queries['queries'][4]
 
 
 
-check_causality('HP2015', vignette_instances[4], query_json)
-
+check_causality('HP2015', vignette_instances[4], queries['queries'][4]) # Suzy throws
+check_causality('HP2015', vignette_instances[4], queries['queries'][5]) # Billy throws
 
 
 

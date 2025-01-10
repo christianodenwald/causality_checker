@@ -1,7 +1,7 @@
 import json
 from HP2015 import powerset
 import sys
-sys.path.append('../d')
+sys.path.append('../')
 
 # Paths to JSON files
 vignettes_path = "../data/vignettes.json"

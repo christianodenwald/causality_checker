@@ -1,17 +1,20 @@
 import json
 
-class AutoUpdatingObject:
-    def __init__(self, variables, default_values, equations):
+class Vignette:
+    def __init__(self, vignette_id, title, description, variables, default_values, equations, notes):
+        self.vignette_id = vignette_id
+        self.title = title
+        self.description = description
         self.variables = variables
-        self.values = {var: val for var, val in zip(variables, default_values)}
-        self.default_values = {var: val for var, val in zip(variables, default_values)}  # Store default values
+        self.values = {var: val for var, val in zip(variables.keys(), default_values)}
+        self.default_values = {var: val for var, val in zip(variables.keys(), default_values)}
         self.equations = self.parse_equations(equations)
+        self.notes = notes
 
     def parse_equations(self, equations):
         """Converts equation strings into callable functions."""
         parsed_equations = {}
         for var, eq in equations.items():
-            # Create a lambda that evaluates the equation in the context of self.values
             parsed_equations[var] = lambda values, eq=eq: eval(eq, {}, values)
         return parsed_equations
 
@@ -33,23 +36,36 @@ class AutoUpdatingObject:
         self.values = self.default_values.copy()
 
     def __repr__(self):
-        return f"{self.values}"
+        return f"Vignette({self.vignette_id}, {self.title}, {self.values})"
 
-# Load JSON
-with open("../data/test.json", "r") as file:
-    data = json.load(file)
 
-# Create the object from JSON
-config = data["a"]
-obj = AutoUpdatingObject(
-    variables=config["variables"],
-    default_values=config["default_values"],
-    equations=config["equations"]
-)
+# Function to load vignettes from JSON
+def load_vignettes(json_path):
+    """Loads vignettes from a JSON file."""
+    with open(json_path, "r") as file:
+        data = json.load(file)
+
+    vignettes = []
+    for vignette_data in data["vignettes"]:
+        variables = vignette_data["variables"]
+        default_values = [0 for _ in variables.keys()]  # Default values are initially set to 0
+        equations = vignette_data["structural_equations"]
+        vignettes.append(
+            Vignette(
+                vignette_id=vignette_data["id"],
+                title=vignette_data["title"],
+                description=vignette_data["description"],
+                variables=variables,
+                default_values=default_values,
+                equations=equations,
+                notes=vignette_data["notes"],
+            )
+        )
+    return vignettes
+
 
 # Example usage
-print(obj)  # Initial values
-obj.set_value("A", 5)  # Change A to 5
-print(obj)  # Updated values
-obj.restore_default_values()  # Restore default values
-print(obj)  # Default values restored
+vignettes = load_vignettes("../data/vignettes.json")
+for vignette in vignettes:
+    print(vignette)
+print()

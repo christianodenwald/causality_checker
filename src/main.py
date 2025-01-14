@@ -1,5 +1,8 @@
+import itertools
 import json
+
 from HP2015 import powerset
+from src.HP2015 import all_splits_with_mandatory_element
 
 # Paths to JSON files
 vignettes_path = "../data/vignettes.json"
@@ -36,6 +39,7 @@ class Vignette:
         notes: Additional notes or metadata for the vignette to provide contextual 
             information.
     """
+
     def __init__(self, vignette_id, title, description, variables, ranges, default_values, equations, notes,
                  setting_id=None):
         self.vignette_id = vignette_id
@@ -308,22 +312,81 @@ def check_causality(theory, vignette, query_json, verbose=True):
             print("====================\n")
 
     elif theory == 'HP2005':
-        pass  # Implement if needed
+        if verbose:
+            print(f"(Theory: {theory})")
+            print(f"Query: {cause_variable}={cause_value} is actual cause of {effect_variable}={effect_value}")
+
+        evaluation_result = False
+        for Z, W in all_splits_with_mandatory_element(vignette.variables, cause_variable):
+            for x_prime in vignette.variables[cause_variable]['range']:
+                if x_prime == cause_value:
+                    continue
+                for w_setting in (
+                        {var: value for var, value in zip(W, w_settings)}
+                        for w_settings in itertools.product(*[vignette.variables[var]['range'] for var in W])
+                ):
+                    vignette.reset_values()
+                    vignette.set_exogenous_values()
+                    vignette.set_value(cause_variable, x_prime)
+                    for var, val in w_setting.items():
+                        vignette.set_value(var, val)
+                    vignette.propagate_set_values()
+                    if vignette.values[effect_variable] == effect_value:  # AC2a satisfied
+                        continue
+                    ac2b_satisfied = True
+                    for subset_w, subset_z in itertools.product(powerset(W), powerset(Z)):
+                        vignette.reset_values()
+                        vignette.set_exogenous_values()
+                        for w in subset_w:
+                            vignette.set_value(w, w_setting[w])
+                        for z in subset_z:
+                            vignette.set_value(z, vignette.default_values[z])
+                        vignette.propagate_set_values()
+                        if vignette.values[effect_variable] != effect_value:
+                            ac2b_satisfied = False
+                            break
+                    if ac2b_satisfied:
+                        witness = f"Witness: W={list(subset_w)}, w'={w_setting}, x'={x_prime}"
+                        evaluation_result = True
+                        break
+                if evaluation_result:
+                    break
+            if evaluation_result:
+                break
+
+        if evaluation_result:
+            if verbose:
+                print("Evaluation: TRUE\t", end='')
+                print(witness)
+        else:
+            if verbose:
+                print("Evaluation: FALSE")
+        print(f"Ground truth: {'TRUE' if query_json['results'][theory] else 'FALSE'}\n")
+        print("====================\n")
+
+
 
     else:
         raise ValueError("Invalid theory")
 
 
-if __name__ == "__main__":
-    vignettes = create_vignettes_with_settings(vignettes_path, settings_path)
-    queries = load_queries(queries_path)
+def evaluate_all_queries(theory, vignettes, queries):
     theory = 'HP2015'
-
     for query in queries:
         matching_vignettes = [vignette for vignette in vignettes if vignette.setting_id == query['setting_id']]
         if not matching_vignettes:
             raise ValueError(f"No matching setting_id {query['setting_id']} found for the query.")
         for vignette in matching_vignettes:
             check_causality(theory, vignette, query)
+
+
+if __name__ == "__main__":
+    vignettes = create_vignettes_with_settings(vignettes_path, settings_path)
+    queries = load_queries(queries_path)
+
+    # check_causality('HP2005', vignettes[3], queries[3])
+
+    evaluate_all_queries('HP2015', vignettes, queries)
+    evaluate_all_queries('HP2005', vignettes, queries)
 
 print()

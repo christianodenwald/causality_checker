@@ -84,30 +84,35 @@ def check_causality_HP(se, cause, phi):
     for partition in all_splits:  # all possible partitions of V in Z and W
         Z, W = partition
         settings = list(itertools.product(*vranges))
-        for setting in settings:  # all possible settings
-            se_mod = copy.copy(se)
+        for setting in settings:  # all possible settings # todo why did I do that; would make more sense after creating subsets
+            se_mod = copy.copy(se)  # current values are stored in se_mod
             intervention(se_mod, cause, 0)  # X <- x'
-            for w in W:
+            for w in W:     # set W <- w'
                 intervention(se_mod, w, setting[w])
             if calculate_phi(se_mod) != phi: # if AC2(a) holds
-                z_subsets = powerset(Z)
-                w_subsets = powerset(W)
+                ac2b_satisfied = True
+                z_subsets = powerset(Z) # for all subsets Z'
+                w_subsets = powerset(W) # for all subsets W'
                 for z_subset in z_subsets:
                     for w_subset in w_subsets:
                         sez = copy.copy(se)
                         intervention(sez, cause, 1)  # X <- x
-                        for w in w_subset:
+                        for w in w_subset:  # set all W' <- w'
                             intervention(sez, w, setting[w])
-                        for z in z_subset:
+                        for z in z_subset:  # set all Z' <_ z'
                             intervention(sez, z, setting[z])
-                        # propagate
+                        # propagate for the values that have not been set yet
                         for i, v in enumerate(sez):
                             if not v:
                                 update2(sez, i)
                         # check if phi
                         if calculate_phi(sez) != phi:
+                            ac2b_satisfied = False
                             break
-                print(f'AC2 satsified.\nZ: {Z}\nW: {W}\nSettings:{setting}')
+                if ac2b_satisfied:
+                    print(f'AC2b satisfied.\nZ: {Z}\nW: {W}\nSettings:{setting}')
+                else:
+                    print(f'AC2b NOT satisfied.\nZ: {Z}\nW: {W}\nSettings:{setting}')
     #             break
     #     break
     # return True

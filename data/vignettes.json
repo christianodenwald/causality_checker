@@ -90,8 +90,8 @@
     "notes": "Suzy's rock always hits the bottle if she throws it. Billy's rock only hits the bottle if he throws it and Suzy's rock does not hit it. The bottle shatters if either Suzy's rock or Billy's rock hits it."
   },
   {
-    "id": "v04-loader_example",
-    "title": "Loader Example",
+    "id": "v04-loader",
+    "title": "Loader",
     "description": "A prisoner dies if either A loads B’s gun and B shoots, or C loads and shoots his own gun.",
     "variables": {
       "A": {
@@ -171,6 +171,66 @@
         "range": [0, 1],
         "notes": "1 if Flipper flips the switch, 0 if not"
       },
+      "T": {
+        "description": "Track",
+        "range": [0, 1],
+        "notes": "1 if the train takes the right track, 0 if left"
+      },
+      "A": {
+        "description": "Train arrives at the destination",
+        "range": [0, 1],
+        "notes": "1 if the train arrives, 0 if not"
+      }
+    },
+    "structural_equations": {
+      "T": "F",
+      "A": "T or not T"
+    },
+    "notes": "The train arrives at its destination regardless of which track it takes, but the track is determined by whether Flipper flips the switch."
+  },
+  {
+    "id": "v06.1-switch_scenario",
+    "title": "Switch Scenario",
+    "description": "Model by Halpern & Hitchcock 2010. Left track blocked by default.",
+    "variables": {
+      "F": {
+        "description": "Flipper flips the switch",
+        "range": [0, 1],
+        "notes": "1 if Flipper flips the switch (blocks left track), 0 if not (blocks right track)"
+      },
+      "LB": {
+        "description": "Left track blocked",
+        "range": [0, 1],
+        "notes": "1 if the left track is blocked, 0 if not"
+      },
+      "RB": {
+        "description": "Right track blocked",
+        "range": [0, 1],
+        "notes": "1 if the right track is blocked, 0 if not"
+      },
+      "A": {
+        "description": "Train arrives at the destination",
+        "range": [0, 1],
+        "notes": "1 if the train arrives, 0 if not"
+      }
+    },
+    "structural_equations": {
+      "LB": "not F",
+      "RB": "F",
+      "A": "LB or RB"
+    },
+    "notes": "The train arrives at its destination regardless of which track it takes, but the track is determined by whether Flipper flips the switch."
+  },
+  {
+    "id": "v06.2-switch_scenario",
+    "title": "Switch Scenario",
+    "description": "Model in Andreas & Günther 2024. Train goes left by default.",
+    "variables": {
+      "F": {
+        "description": "Flipper flips the switch",
+        "range": [0, 1],
+        "notes": "1 if Flipper flips the switch, 0 if not"
+      },
       "RT": {
         "description": "Train takes the right track",
         "range": [0, 1],
@@ -188,8 +248,8 @@
       }
     },
     "structural_equations": {
-      "RT": "F",
       "LT": "not F",
+      "RT": "F",
       "A": "RT or LT"
     },
     "notes": "The train arrives at its destination regardless of which track it takes, but the track is determined by whether Flipper flips the switch."

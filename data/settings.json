@@ -3,44 +3,34 @@
     "setting_id": "s01-ff_disj-1",
     "vignette_id": "v01-ff_disj",
     "initial_values": {
-      "M": 0,
+      "M": 1,
+      "L": 1,
+      "FF": 1
+    },
+    "description": "Both causes would be individually sufficient to bring about the cause."
+  },
+  {
+    "setting_id": "s01-ff_disj-2",
+    "vignette_id": "v01-ff_disj",
+    "initial_values": {
+      "M": 1,
       "L": 0,
-      "FF": 0
-    }
+      "FF": 1
+    },
+    "description": "Only one of the overdetermined causes occurs."
   },
   {
     "setting_id": "s02-ff_conj-1",
     "vignette_id": "v02-ff_conj",
     "initial_values": {
-      "M": 0,
-      "L": 0,
-      "FF": 0
-    }
+      "M": 1,
+      "L": 1,
+      "FF": 1
+    },
+    "description": "First setting for vignette v02-ff_conj with M=1, L=1, FF=1."
   },
   {
     "setting_id": "s03-bottle_shatters-1",
-    "vignette_id": "v03-bottle_shatters",
-    "initial_values": {
-      "ST": 0,
-      "BT": 0,
-      "SH": 0,
-      "BH": 0,
-      "BS": 0
-    }
-  },
-  {
-    "setting_id": "s03-bottle_shatters-2",
-    "vignette_id": "v03-bottle_shatters",
-    "initial_values": {
-      "ST": 1,
-      "BT": 0,
-      "SH": 1,
-      "BH": 0,
-      "BS": 1
-    }
-  },
-  {
-    "setting_id": "s03-bottle_shatters-3",
     "vignette_id": "v03-bottle_shatters",
     "initial_values": {
       "ST": 1,
@@ -48,10 +38,11 @@
       "SH": 1,
       "BH": 0,
       "BS": 1
-    }
+    },
+    "description": "Standard setting."
   },
   {
-    "setting_id": "s03-bottle_shatters-4",
+    "setting_id": "s03-bottle_shatters-2",
     "vignette_id": "v03-bottle_shatters",
     "initial_values": {
       "ST": 0,
@@ -59,17 +50,31 @@
       "SH": 0,
       "BH": 1,
       "BS": 1
-    }
+    },
+    "description": "Suzy does not throw."
   },
   {
-    "setting_id": "s04-loader_example-1",
-    "vignette_id": "v04-loader_example",
+    "setting_id": "s03-bottle_shatters-3",
+    "vignette_id": "v03-bottle_shatters",
     "initial_values": {
-      "A": 0,
+      "ST": 1,
+      "BT": 1,
+      "SH": 0,
+      "BH": 1,
+      "BS": 1
+    },
+    "description": "Suzy throws but misses."
+  },
+  {
+    "setting_id": "s04-loader-1",
+    "vignette_id": "v04-loader",
+    "initial_values": {
+      "A": 1,
       "B": 0,
-      "C": 0,
-      "D": 0
-    }
+      "C": 1,
+      "D": 1
+    },
+    "description": "Standard setting."
   },
   {
     "setting_id": "s05-overdet_voting-1",
@@ -81,46 +86,82 @@
       "D": 0,
       "E": 0,
       "P": 1
-    }
+    },
+    "description": "Standard setting."
   },
   {
     "setting_id": "s06-switch_scenario-1",
     "vignette_id": "v06-switch_scenario",
     "initial_values": {
       "F": 1,
+      "T": 1,
+      "A": 1
+    },
+    "description": "Flipper flips switch, train goes right."
+  },
+  {
+    "setting_id": "s06-switch_scenario-2",
+    "vignette_id": "v06-switch_scenario",
+    "initial_values": {
+      "F": 0,
+      "T": 0,
+      "A": 1
+    },
+    "description": "Flipper doesn't switch, train goes left."
+  },
+  {
+    "setting_id": "s06.1-switch_scenario-1",
+    "vignette_id": "v06.1-switch_scenario",
+    "initial_values": {
+      "F": 0,
+      "LB": 1,
+      "RB": 0,
+      "A": 1
+    },
+    "description": "Flipper doesn't switch, left track blocked, train goes right."
+  },
+  {
+    "setting_id": "s06.1-switch_scenario-2",
+    "vignette_id": "v06.1-switch_scenario",
+    "initial_values": {
+      "F": 1,
+      "LB": 0,
+      "RB": 1,
+      "A": 1
+    },
+    "description": "Flipper doesn't switch, right track blocked, train goes left."
+  },
+  {
+    "setting_id": "s06.2-switch_scenario-1",
+    "vignette_id": "v06.2-switch_scenario",
+    "initial_values": {
+      "F": 1,
       "RT": 1,
       "LT": 0,
       "A": 1
-    }
+    },
+    "description": "Switch is flipped, train takes right track."
+  },
+  {
+    "setting_id": "s06.2-switch_scenario-2",
+    "vignette_id": "v06.2-switch_scenario",
+    "initial_values": {
+      "F": 0,
+      "RT": 0,
+      "LT": 1,
+      "A": 1
+    },
+    "description": "Switch is not flipped, train takes left track."
   },
   {
     "setting_id": "s07-short_circuit-1",
-    "vignette_id": "v07-short_circuit",
-    "initial_values": {
-      "BD": 0,
-      "B": 0,
-      "D": 0,
-      "E": 0
-    }
-  },
-  {
-    "setting_id": "s07-short_circuit-2",
     "vignette_id": "v07-short_circuit",
     "initial_values": {
       "BD": 1,
       "B": 1,
       "D": 1,
       "E": 0
-    }
-  },
-  {
-    "setting_id": "s07-short_circuit-3",
-    "vignette_id": "v07-short_circuit",
-    "initial_values": {
-      "BD": 1,
-      "B": 1,
-      "D": 0,
-      "E": 1
-    }
+    },
+    "description": "Standard setting."
   }
 ]

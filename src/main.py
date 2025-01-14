@@ -1,18 +1,43 @@
 import json
 from HP2015 import powerset
-import sys
-sys.path.append('../')
 
 # Paths to JSON files
 vignettes_path = "../data/vignettes.json"
 settings_path = "../data/settings.json"
 queries_path = "../data/queries.json"
 
+
 #### CLASSES
 
 
 class Vignette:
-    def __init__(self, vignette_id, title, description, variables, ranges, default_values, equations, notes, setting_id=None):
+    """
+    Represents a configurable vignette model with variables, equations, and settings.
+
+    This class is designed to handle a set of variables, their configurations, as well
+    as dependencies between them in the form of equations. It provides mechanisms to
+    initialize, update, restore defaults, and perform computations based on the
+    provided or computed data. The purpose of this class is to model scenarios where
+    variables have interdependent relationships, defined by equations, and allow for
+    controlled manipulation and analysis of such relationships and values.
+
+    Attributes:
+        vignette_id: Identifier for the vignette.
+        setting_id: Optional identifier for the associated settings configuration.
+        title: Title of the vignette, typically a brief descriptive name.
+        description: Full description of the vignette's purpose, scope, or scenario.
+        variables: Dictionary defining the variables and their metadata.
+        ranges: Dictionary specifying the allowable ranges for the variables.
+        values: Dictionary holding the current values of each variable.
+        default_values: Dictionary for the default values of each variable, used for
+            resets or restoration purposes.
+        equations: Dictionary mapping variables to their respective equations. Each
+            equation defines how the variable value is computed.
+        notes: Additional notes or metadata for the vignette to provide contextual 
+            information.
+    """
+    def __init__(self, vignette_id, title, description, variables, ranges, default_values, equations, notes,
+                 setting_id=None):
         self.vignette_id = vignette_id
         self.setting_id = setting_id
         self.title = title
@@ -84,20 +109,23 @@ class Vignette:
                 self.set_value(var, self.default_values[var])
 
     def reset_values(self):
+        """Sets all values to None."""
         for var, value in self.default_values.items():
             self.set_value(var, None)
 
     def propagate_set_values(self):
+        """Propagates values based on equations based on values that are already set."""
         for var, value in self.values.items():
             if value is None:
                 new_value = self.equations[var](self.values)
                 self.set_value(var, new_value)
 
-
     def __repr__(self):
         return f"Vignette({self.vignette_id}, {self.title}, {self.values})"
 
+
 #### METHODS
+
 
 def load_vignettes(json_path):
     """Loads vignettes from a JSON file."""
@@ -125,14 +153,17 @@ def load_vignettes(json_path):
         )
     return vignettes
 
+
 def load_settings(settings_path):
     """Load settings from the JSON file."""
     with open(settings_path, 'r') as f:
         return json.load(f)
 
+
 def load_queries(query_path):
     with open(query_path, 'r') as f:
         return json.load(f)
+
 
 def create_vignettes_with_settings(vignettes_path, settings_path):
     """Create vignettes with settings applied."""
@@ -169,18 +200,40 @@ def create_vignettes_with_settings(vignettes_path, settings_path):
     return vignette_instances
 
 
+def check_causality(theory, vignette, query_json, verbose=True):
+    """
+        Determines whether a given query satisfies causality conditions based on a specified theory
+        in the context of a given vignette. It checks conditions using the query's cause-effect
+        relationship and evaluated results. The function can provide verbose output optionally.
 
-def check_causality(theory, vignette, query_json):
+        Parameters:
+            theory: str
+                The causality theory to be verified (e.g., 'HP2015', 'HP2005').
+            vignette: object
+                A vignette model containing variables, equations, and their relationships.
+            query_json: dict
+                A JSON-like structured dictionary containing details of causality queries with cause-effect pairs and results.
+            verbose: bool, optional (default=True)
+                Flag to enable detailed printed output during the evaluation process.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError
+                If cause or effect variable is not in the vignette.
+                If AC1 condition is violated for the cause or effect variable.
+                If no alternative value for the cause variable is found.
+                If an invalid theory is provided.
+
+        Notes:
+            This function currently implements logic for HP2015 theory only. HP2005 and other theories
+            are placeholders and need further implementation.
+            Requires the vignette object to have methods for resetting variable values, setting
+            exogenous values, applying custom values, and propagating these values based on equations.
     """
-    Checks causality based on a given theory using the updated Vignette class.
-    :param theory: The theory to apply ('HP2015', 'HP2005').
-    :param vignette: A Vignette object.
-    :param cause_variable: The cause variable name.
-    :param cause_value: The cause variable value.
-    :param effect_variable: The effect variable name.
-    :param effect_value: The effect variable value.
-    """
-    print(f"{vignette.title} ", end='')
+    if verbose:
+        print(f"{vignette.title} ", end='')
 
     cause = query_json["query"]["cause"]
     effect = query_json["query"]["effect"]
@@ -195,10 +248,22 @@ def check_causality(theory, vignette, query_json):
         raise ValueError("Cause or effect variable is not in the vignette.")
 
     ### AC1 is implied
+    if vignette.default_values[cause_variable] != cause_value:
+        raise ValueError(
+            f"AC1 condition violated: Default value of '{cause_variable}' ({vignette.default_values[cause_variable]}) "
+            f"does not match expected value {cause_value}."
+        )
+
+    if vignette.default_values[effect_variable] != effect_value:
+        raise ValueError(
+            f"AC1 condition violated: Default value of '{effect_variable}' ({vignette.default_values[effect_variable]}) "
+            f"does not match expected value {effect_value}."
+        )
 
     if theory == 'HP2015':
-        print(f"(Theory: {theory})")
-        print(f"Query: {cause_variable}={cause_value} is actual cause of {effect_variable}={effect_value}")
+        if verbose:
+            print(f"(Theory: {theory})")
+            print(f"Query: {cause_variable}={cause_value} is actual cause of {effect_variable}={effect_value}")
 
         ### AC2am
         # Find x' (an alternative value for the cause variable)
@@ -225,14 +290,22 @@ def check_causality(theory, vignette, query_json):
 
             # Check the effect
             if vignette.values[effect_variable] != effect_value:
-                print('Evaluation: TRUE\t', end='')
-                print(f"Witness: W={list(subset_w)}, w={[vignette.values[var] for var in subset_w]}, x'={x_prime}")
-                break
+                if verbose:
+                    print('Evaluation: TRUE\t', end='')
+                    print(f"Witness: W={list(subset_w)}, w={[vignette.values[var] for var in subset_w]}, x'={x_prime}")
+                    break
         else:
-            print('Evaluation: FALSE')
+            if verbose:
+                print('Evaluation: FALSE')
 
-        print(f'Ground truth: {"TRUE" if query_json["results"][theory] else "FALSE"}\n')
-        print("====================\n")
+        if query_json["results"][theory] in {0, 1}:
+            if verbose:
+                print(f'Ground truth: {"TRUE" if query_json["results"][theory] else "FALSE"}\n')
+        else:
+            if verbose:
+                print("Ground truth not provided.\n")
+        if verbose:
+            print("====================\n")
 
     elif theory == 'HP2005':
         pass  # Implement if needed
@@ -241,18 +314,16 @@ def check_causality(theory, vignette, query_json):
         raise ValueError("Invalid theory")
 
 
-
-
-
-
-
 if __name__ == "__main__":
     vignettes = create_vignettes_with_settings(vignettes_path, settings_path)
     queries = load_queries(queries_path)
     theory = 'HP2015'
-    for vignette in vignettes:
-        for query in queries:
-            if vignette.setting_id == query['setting_id']:
-                check_causality(theory, vignette, query)
+
+    for query in queries:
+        matching_vignettes = [vignette for vignette in vignettes if vignette.setting_id == query['setting_id']]
+        if not matching_vignettes:
+            raise ValueError(f"No matching setting_id {query['setting_id']} found for the query.")
+        for vignette in matching_vignettes:
+            check_causality(theory, vignette, query)
 
 print()

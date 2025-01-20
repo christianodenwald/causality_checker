@@ -10,16 +10,6 @@
     "description": "Both causes would be individually sufficient to bring about the cause."
   },
   {
-    "setting_id": "s01-ff_disj-2",
-    "vignette_id": "v01-ff_disj",
-    "initial_values": {
-      "M": 1,
-      "L": 0,
-      "FF": 1
-    },
-    "description": "Only one of the overdetermined causes occurs."
-  },
-  {
     "setting_id": "s02-ff_conj-1",
     "vignette_id": "v02-ff_conj",
     "initial_values": {
@@ -40,30 +30,6 @@
       "BS": 1
     },
     "description": "Standard setting."
-  },
-  {
-    "setting_id": "s03-bottle_shatters-2",
-    "vignette_id": "v03-bottle_shatters",
-    "initial_values": {
-      "ST": 0,
-      "BT": 1,
-      "SH": 0,
-      "BH": 1,
-      "BS": 1
-    },
-    "description": "Suzy does not throw."
-  },
-  {
-    "setting_id": "s03-bottle_shatters-3",
-    "vignette_id": "v03-bottle_shatters",
-    "initial_values": {
-      "ST": 1,
-      "BT": 1,
-      "SH": 0,
-      "BH": 1,
-      "BS": 1
-    },
-    "description": "Suzy throws but misses."
   },
   {
     "setting_id": "s04-loader-1",
@@ -100,27 +66,6 @@
     "description": "Flipper flips switch, train goes right."
   },
   {
-    "setting_id": "s06-switch_scenario-2",
-    "vignette_id": "v06-switch_scenario",
-    "initial_values": {
-      "F": 0,
-      "T": 0,
-      "A": 1
-    },
-    "description": "Flipper doesn't switch, train goes left."
-  },
-  {
-    "setting_id": "s06.1-switch_scenario-1",
-    "vignette_id": "v06.1-switch_scenario",
-    "initial_values": {
-      "F": 0,
-      "LB": 1,
-      "RB": 0,
-      "A": 1
-    },
-    "description": "Flipper doesn't switch, left track blocked, train goes right."
-  },
-  {
     "setting_id": "s06.1-switch_scenario-2",
     "vignette_id": "v06.1-switch_scenario",
     "initial_values": {
@@ -129,7 +74,7 @@
       "RB": 1,
       "A": 1
     },
-    "description": "Flipper doesn't switch, right track blocked, train goes left."
+    "description": "Flipper switches, right track blocked, train goes left."
   },
   {
     "setting_id": "s06.2-switch_scenario-1",
@@ -141,17 +86,6 @@
       "A": 1
     },
     "description": "Switch is flipped, train takes right track."
-  },
-  {
-    "setting_id": "s06.2-switch_scenario-2",
-    "vignette_id": "v06.2-switch_scenario",
-    "initial_values": {
-      "F": 0,
-      "RT": 0,
-      "LT": 1,
-      "A": 1
-    },
-    "description": "Switch is not flipped, train takes left track."
   },
   {
     "setting_id": "s07-short_circuit-1",

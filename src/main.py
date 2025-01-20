@@ -5,8 +5,7 @@ from HP2015 import powerset
 from src.HP2015 import all_splits_with_mandatory_element
 
 # Paths to JSON files
-vignettes_path = "../data/vignettes.json"
-settings_path = "../data/settings.json"
+vignettes_path = "../data/vignettes_new.json"
 queries_path = "../data/queries.json"
 
 
@@ -40,10 +39,8 @@ class Vignette:
             information.
     """
 
-    def __init__(self, vignette_id, title, description, variables, ranges, default_values, equations, notes,
-                 setting_id=None):
+    def __init__(self, vignette_id, title, description, variables, ranges, default_values, equations):
         self.vignette_id = vignette_id
-        self.setting_id = setting_id
         self.title = title
         self.description = description
         self.variables = variables
@@ -51,7 +48,6 @@ class Vignette:
         self.values = {var: val for var, val in zip(variables.keys(), default_values)}
         self.default_values = {var: val for var, val in zip(variables.keys(), default_values)}
         self.equations = self.parse_equations(equations)
-        self.notes = notes
 
     def parse_equations(self, equations):
         """
@@ -139,8 +135,9 @@ def load_vignettes(json_path):
     vignettes = []
     for vignette_data in data:
         variables = vignette_data["variables"]
-        default_values = [0 for _ in variables.keys()]  # Default values are initially set to 0
-        equations = vignette_data["structural_equations"]
+        default_values = [details['initial_value'] for details in vignette_data['variables'].values()]
+        equations = {var:details['structural_equation'] for var, details in vignette_data['variables'].items() if 'structural_equation' in details}
+
         # Extract variable ranges
         ranges = {var: info["range"] for var, info in variables.items()}
         vignettes.append(
@@ -152,56 +149,15 @@ def load_vignettes(json_path):
                 ranges=ranges,
                 default_values=default_values,
                 equations=equations,
-                notes=vignette_data["notes"],
             )
         )
     return vignettes
-
-
-def load_settings(settings_path):
-    """Load settings from the JSON file."""
-    with open(settings_path, 'r') as f:
-        return json.load(f)
 
 
 def load_queries(query_path):
     with open(query_path, 'r') as f:
         return json.load(f)
 
-
-def create_vignettes_with_settings(vignettes_path, settings_path):
-    """Create vignettes with settings applied."""
-    # Load vignettes and settings
-    vignettes_data = load_vignettes(vignettes_path)
-    settings_data = load_settings(settings_path)
-
-    # Dictionary to map vignette IDs to vignette objects
-    vignette_map = {vignette.vignette_id: vignette for vignette in vignettes_data}
-
-    # Create instances based on settings
-    vignette_instances = []
-    for setting in settings_data:
-        vignette_id = setting['vignette_id']
-        if vignette_id in vignette_map:
-            # Clone the vignette and apply the setting
-            original_vignette = vignette_map[vignette_id]
-            vignette = Vignette(
-                setting_id=setting['setting_id'],
-                vignette_id=vignette_id,
-                title=original_vignette.title,
-                description=original_vignette.description,
-                variables=original_vignette.variables,
-                ranges=original_vignette.ranges,
-                default_values=list(setting['initial_values'].values()),
-                equations=original_vignette.equations,
-                notes=original_vignette.notes
-            )
-            vignette.restore_default_values()  # Ensure default values are set
-            vignette_instances.append(vignette)
-        else:
-            print(f"Warning: Vignette ID {vignette_id} not found in vignettes.json")
-
-    return vignette_instances
 
 
 def check_causality(theory, vignette, query_json, verbose=True):
@@ -251,8 +207,10 @@ def check_causality(theory, vignette, query_json, verbose=True):
     if cause_variable not in vignette.variables or effect_variable not in vignette.variables:
         raise ValueError("Cause or effect variable is not in the vignette.")
 
-    ### AC1 is implied
+    ## AC1 is implied
     if vignette.default_values[cause_variable] != cause_value:
+        print(query_json)
+        print(vignette)
         raise ValueError(
             f"AC1 condition violated: Default value of '{cause_variable}' ({vignette.default_values[cause_variable]}) "
             f"does not match expected value {cause_value}."
@@ -370,23 +328,23 @@ def check_causality(theory, vignette, query_json, verbose=True):
         raise ValueError("Invalid theory")
 
 
-def evaluate_all_queries(theory, vignettes, queries):
-    theory = 'HP2015'
+def evaluate_all_queries(vignettes, queries, theory='HP2015'):
     for query in queries:
-        matching_vignettes = [vignette for vignette in vignettes if vignette.setting_id == query['setting_id']]
+        matching_vignettes = [vignette for vignette in vignettes if vignette.vignette_id == query['vignette_id']]
         if not matching_vignettes:
-            raise ValueError(f"No matching setting_id {query['setting_id']} found for the query.")
+            raise ValueError(f"No matching vignette_id {query['vignette_id']} found for the query.")
         for vignette in matching_vignettes:
             check_causality(theory, vignette, query)
 
 
 if __name__ == "__main__":
-    vignettes = create_vignettes_with_settings(vignettes_path, settings_path)
+    vignettes = load_vignettes(vignettes_path)
+    # vignettes = create_vignettes_with_settings(vignettes_path, settings_path)
     queries = load_queries(queries_path)
 
     # check_causality('HP2005', vignettes[3], queries[3])
 
-    evaluate_all_queries('HP2015', vignettes, queries)
-    evaluate_all_queries('HP2005', vignettes, queries)
+    evaluate_all_queries(vignettes, queries, theory='HP2015')
+    evaluate_all_queries(vignettes, queries, theory='HP2005')
 
 print()

@@ -70,20 +70,6 @@
     }
   },
   {
-    "query_id": "q03-bottle_shatters-BT_BS-3",
-    "vignette_id": "v03-bottle_shatters",
-    "setting_id": "s03-bottle_shatters-2",
-    "query": {
-      "cause": { "BT": 1 },
-      "effect": { "BS": 1 },
-      "question": "If Suzy misses, is Billy throwing a rock a cause of the bottle shattering?"
-    },
-    "results": {
-      "HP2005": 1,
-      "HP2015": 1
-    }
-  },
-  {
     "query_id": "q04-loader-A_and_B_D-1",
     "vignette_id": "v04-loader",
     "setting_id": "s04-loader-1",
@@ -125,35 +111,6 @@
       "HP2015": 0
     }
   },
-  {
-    "query_id": "q06-switch_scenario-F_A-2",
-    "vignette_id": "v06-switch_scenario",
-    "setting_id": "s06-switch_scenario-2",
-    "query": {
-      "cause": { "F": 0 },
-      "effect": { "A": 1 },
-      "question": "Is Flipper flipping the switch a cause of the train arriving?"
-    },
-    "results": {
-      "HP2005": "",
-      "HP2015": ""
-    }
-  },
-  {
-    "query_id": "q06.1-switch_scenario-1",
-    "vignette_id": "v06.1-switch_scenario",
-    "setting_id": "s06.1-switch_scenario-1",
-    "query": {
-      "cause": { "F": 0 },
-      "effect": { "A": 1 },
-      "question": "Is Flipper flipping the switch a cause of the train arriving?"
-    },
-    "results": {
-      "HP2005": "",
-      "HP2015": ""
-    }
-  },
-
   {
     "query_id": "q07-short_circuit-D_E-2",
     "vignette_id": "v07-short_circuit",

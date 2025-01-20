@@ -1,5 +1,6 @@
 import itertools
 import json
+import pandas as pd
 
 from HP2015 import powerset
 from src.HP2015 import all_splits_with_mandatory_element
@@ -132,7 +133,7 @@ def load_vignettes(json_path):
     with open(json_path, "r") as file:
         data = json.load(file)
 
-    vignettes = []
+    vignettes = dict()
     for vignette_data in data:
         variables = vignette_data["variables"]
         default_values = [details['initial_value'] for details in vignette_data['variables'].values()]
@@ -140,8 +141,7 @@ def load_vignettes(json_path):
 
         # Extract variable ranges
         ranges = {var: info["range"] for var, info in variables.items()}
-        vignettes.append(
-            Vignette(
+        vignettes[vignette_data["id"]] = Vignette(
                 vignette_id=vignette_data["id"],
                 title=vignette_data["title"],
                 description=vignette_data["description"],
@@ -150,7 +150,7 @@ def load_vignettes(json_path):
                 default_values=default_values,
                 equations=equations,
             )
-        )
+
     return vignettes
 
 
@@ -223,6 +223,7 @@ def check_causality(theory, vignette, query_json, verbose=True):
         )
 
     if theory == 'HP2015':
+        evaluation_result = False
         if verbose:
             print(f"(Theory: {theory})")
             print(f"Query: {cause_variable}={cause_value} is actual cause of {effect_variable}={effect_value}")
@@ -252,10 +253,11 @@ def check_causality(theory, vignette, query_json, verbose=True):
 
             # Check the effect
             if vignette.values[effect_variable] != effect_value:
+                evaluation_result = True
                 if verbose:
                     print('Evaluation: TRUE\t', end='')
                     print(f"Witness: W={list(subset_w)}, w={[vignette.values[var] for var in subset_w]}, x'={x_prime}")
-                    break
+                break
         else:
             if verbose:
                 print('Evaluation: FALSE')
@@ -268,6 +270,7 @@ def check_causality(theory, vignette, query_json, verbose=True):
                 print("Ground truth not provided.\n")
         if verbose:
             print("====================\n")
+        return evaluation_result
 
     elif theory == 'HP2005':
         if verbose:
@@ -321,6 +324,7 @@ def check_causality(theory, vignette, query_json, verbose=True):
                 print("Evaluation: FALSE")
         print(f"Ground truth: {'TRUE' if query_json['results'][theory] else 'FALSE'}\n")
         print("====================\n")
+        return evaluation_result
 
 
 
@@ -330,11 +334,39 @@ def check_causality(theory, vignette, query_json, verbose=True):
 
 def evaluate_all_queries(vignettes, queries, theory='HP2015'):
     for query in queries:
-        matching_vignettes = [vignette for vignette in vignettes if vignette.vignette_id == query['vignette_id']]
-        if not matching_vignettes:
-            raise ValueError(f"No matching vignette_id {query['vignette_id']} found for the query.")
-        for vignette in matching_vignettes:
-            check_causality(theory, vignette, query)
+        check_causality(theory, vignettes[query['vignette_id']], query)
+
+def parse_gt(queries, theory='HP2005'):
+    gts = dict()
+    for query in queries:
+        gts[query['query_id']] = query['results'][theory]
+    return gts
+
+def evaluate_theory(vignettes, queries, theory='HP2005'):
+    results = dict()
+    for query in queries:
+        results[query['query_id']] = int(check_causality(theory, vignettes[query['vignette_id']], query))
+    return results
+
+def compare_theories(queries, vignettes):
+
+    gt_HP2005 = parse_gt(queries, theory='HP2005')
+    gt_HP2015 = parse_gt(queries, theory='HP2015')
+    ev_HP2005 = evaluate_theory(vignettes, queries, theory='HP2005')
+    ev_HP2015 = evaluate_theory(vignettes, queries, theory='HP2015')
+
+    dicts = [gt_HP2005, ev_HP2005, gt_HP2015, ev_HP2015]
+
+    # Create DataFrame and transpose so keys become rows
+    df = pd.DataFrame(dicts).transpose()
+
+    # Rename columns to indicate which dictionary they came from
+    df.columns = ['HP2005-GT', 'HP2005-EV', 'HP2015-GT', 'HP2015-EV']
+
+    return df
+
+
+
 
 
 if __name__ == "__main__":
@@ -344,7 +376,12 @@ if __name__ == "__main__":
 
     # check_causality('HP2005', vignettes[3], queries[3])
 
-    evaluate_all_queries(vignettes, queries, theory='HP2015')
-    evaluate_all_queries(vignettes, queries, theory='HP2005')
+    # evaluate_all_queries(vignettes, queries, theory='HP2015')
+    # evaluate_all_queries(vignettes, queries, theory='HP2005')
+
+    # gt = parse_gt(queries)
+
+    comparison_df = compare_theories(queries, vignettes)
+
 
 print()

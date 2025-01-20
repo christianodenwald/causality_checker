@@ -5,7 +5,7 @@ from HP2015 import powerset
 from src.HP2015 import all_splits_with_mandatory_element
 
 # Paths to JSON files
-vignettes_path = "../data/vignettes_new.json"
+vignettes_path = "../data/vignettes.json"
 queries_path = "../data/queries.json"
 
 

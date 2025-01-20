@@ -7,23 +7,20 @@
       "M": {
         "description": "Match lit",
         "range": [0, 1],
-        "notes": "1 if the match is lit, 0 if not"
+        "initial_value": 1
       },
       "L": {
         "description": "Lightning strike",
         "range": [0, 1],
-        "notes": "1 if lightning strikes, 0 if not"
+        "initial_value": 1
       },
       "FF": {
         "description": "Forest fire",
         "range": [0, 1],
-        "notes": "1 if forest fire occurs, 0 if not"
+        "structural_equation": "M or L",
+        "initial_value": 1
       }
-    },
-    "structural_equations": {
-      "FF": "M or L"
-    },
-    "notes": "The forest fire occurs if either the match is lit or a lightning strike happens."
+    }
   },
   {
     "id": "v02-ff_conj",
@@ -33,23 +30,20 @@
       "M": {
         "description": "Match lit",
         "range": [0, 1],
-        "notes": "1 if the match is lit, 0 if not"
+        "initial_value": 1
       },
       "L": {
         "description": "Lightning strike",
         "range": [0, 1],
-        "notes": "1 if lightning strikes, 0 if not"
+        "initial_value": 1
       },
       "FF": {
         "description": "Forest fire",
         "range": [0, 1],
-        "notes": "1 if forest fire occurs, 0 if not"
+        "structural_equation": "M and L",
+        "initial_value": 1
       }
-    },
-    "structural_equations": {
-      "FF": "M and L"
-    },
-    "notes": "The forest fire occurs only if both a match is lit and a lightning strike happen together."
+    }
   },
   {
     "id": "v03-bottle_shatters",
@@ -59,66 +53,60 @@
       "ST": {
         "description": "Suzy throws a rock",
         "range": [0, 1],
-        "notes": "1 if Suzy throws a rock, 0 if not"
+        "initial_value": 1
       },
       "BT": {
         "description": "Billy throws a rock",
         "range": [0, 1],
-        "notes": "1 if Billy throws a rock, 0 if not"
+        "initial_value": 1
       },
       "SH": {
         "description": "Suzy's rock hits the intact bottle",
         "range": [0, 1],
-        "notes": "1 if Suzy's rock hits the intact bottle, 0 if not"
+        "structural_equation": "ST",
+        "initial_value": 1
       },
       "BH": {
         "description": "Billy's rock hits the intact bottle",
         "range": [0, 1],
-        "notes": "1 if Billy's rock hits the intact bottle, 0 if not"
+        "structural_equation": "BT and not SH",
+        "initial_value": 0
       },
       "BS": {
         "description": "Bottle shatters",
         "range": [0, 1],
-        "notes": "1 if the bottle shatters, 0 if not"
+        "structural_equation": "SH or BH",
+        "initial_value": 1
       }
-    },
-    "structural_equations": {
-      "SH": "ST",
-      "BH": "BT and not SH",
-      "BS": "SH or BH"
-    },
-    "notes": "Suzy's rock always hits the bottle if she throws it. Billy's rock only hits the bottle if he throws it and Suzy's rock does not hit it. The bottle shatters if either Suzy's rock or Billy's rock hits it."
+    }
   },
   {
     "id": "v04-loader",
     "title": "Loader",
-    "description": "A prisoner dies if either A loads B’s gun and B shoots, or C loads and shoots his own gun.",
+    "description": "A prisoner dies if either A loads B\u2019s gun and B shoots, or C loads and shoots his own gun.",
     "variables": {
       "A": {
         "description": "A loads B's gun",
         "range": [0, 1],
-        "notes": "1 if A loads B's gun, 0 if not"
+        "initial_value": 1
       },
       "B": {
         "description": "B shoots his gun",
         "range": [0, 1],
-        "notes": "1 if B shoots his gun, 0 if not"
+        "initial_value": 0
       },
       "C": {
         "description": "C loads and shoots his gun",
         "range": [0, 1],
-        "notes": "1 if C loads and shoots his gun, 0 if not"
+        "initial_value": 1
       },
       "D": {
         "description": "Prisoner dies",
         "range": [0, 1],
-        "notes": "1 if the prisoner dies, 0 if not"
+        "structural_equation": "(A and B) or C",
+        "initial_value": 1
       }
-    },
-    "structural_equations": {
-      "D": "(A and B) or C"
-    },
-    "notes": "The prisoner dies if either A loads B's gun and B shoots, or if C loads and shoots his own gun."
+    }
   },
   {
     "id": "v05-overdet_voting",
@@ -128,38 +116,35 @@
       "A": {
         "description": "A votes yes",
         "range": [0, 1],
-        "notes": "1 if A votes yes, 0 if not"
+        "initial_value": 1
       },
       "B": {
         "description": "B votes yes",
         "range": [0, 1],
-        "notes": "1 if B votes yes, 0 if not"
+        "initial_value": 1
       },
       "C": {
         "description": "C votes yes",
         "range": [0, 1],
-        "notes": "1 if C votes yes, 0 if not"
+        "initial_value": 1
       },
       "D": {
         "description": "D votes yes",
         "range": [0, 1],
-        "notes": "1 if D votes yes, 0 if not"
+        "initial_value": 0
       },
       "E": {
         "description": "E votes yes",
         "range": [0, 1],
-        "notes": "1 if E votes yes, 0 if not"
+        "initial_value": 0
       },
       "P": {
         "description": "Proposal passes",
         "range": [0, 1],
-        "notes": "1 if the proposal passes, 0 if not"
+        "structural_equation": "(A + B + C + D + E) >= 3",
+        "initial_value": 1
       }
-    },
-    "structural_equations": {
-      "P": "(A + B + C + D + E) >= 3"
-    },
-    "notes": "The proposal passes if at least 3 agents vote yes. A, B, and C voted yes, so the proposal passes. This creates an overdetermination scenario where no single vote is strictly necessary."
+    }
   },
   {
     "id": "v06-switch_scenario",
@@ -169,24 +154,21 @@
       "F": {
         "description": "Flipper flips the switch",
         "range": [0, 1],
-        "notes": "1 if Flipper flips the switch, 0 if not"
+        "initial_value": 1
       },
       "T": {
         "description": "Track",
         "range": [0, 1],
-        "notes": "1 if the train takes the right track, 0 if left"
+        "structural_equation": "F",
+        "initial_value": 1
       },
       "A": {
         "description": "Train arrives at the destination",
         "range": [0, 1],
-        "notes": "1 if the train arrives, 0 if not"
+        "structural_equation": "T or not T",
+        "initial_value": 1
       }
-    },
-    "structural_equations": {
-      "T": "F",
-      "A": "T or not T"
-    },
-    "notes": "The train arrives at its destination regardless of which track it takes, but the track is determined by whether Flipper flips the switch."
+    }
   },
   {
     "id": "v06.1-switch_scenario",
@@ -196,95 +178,86 @@
       "F": {
         "description": "Flipper flips the switch",
         "range": [0, 1],
-        "notes": "1 if Flipper flips the switch (blocks left track), 0 if not (blocks right track)"
+        "initial_value": 1
       },
       "LB": {
         "description": "Left track blocked",
         "range": [0, 1],
-        "notes": "1 if the left track is blocked, 0 if not"
+        "structural_equation": "not F",
+        "initial_value": 0
       },
       "RB": {
         "description": "Right track blocked",
         "range": [0, 1],
-        "notes": "1 if the right track is blocked, 0 if not"
+        "structural_equation": "F",
+        "initial_value": 1
       },
       "A": {
         "description": "Train arrives at the destination",
         "range": [0, 1],
-        "notes": "1 if the train arrives, 0 if not"
+        "structural_equation": "LB or RB",
+        "initial_value": 1
       }
-    },
-    "structural_equations": {
-      "LB": "not F",
-      "RB": "F",
-      "A": "LB or RB"
-    },
-    "notes": "The train arrives at its destination regardless of which track it takes, but the track is determined by whether Flipper flips the switch."
+    }
   },
   {
     "id": "v06.2-switch_scenario",
     "title": "Switch Scenario",
-    "description": "Model in Andreas & Günther 2024. Train goes left by default.",
+    "description": "Model in Andreas & G\u00fcnther 2024. Train goes left by default.",
     "variables": {
       "F": {
         "description": "Flipper flips the switch",
         "range": [0, 1],
-        "notes": "1 if Flipper flips the switch, 0 if not"
+        "initial_value": 1
       },
       "RT": {
         "description": "Train takes the right track",
         "range": [0, 1],
-        "notes": "1 if the train takes the right track, 0 if not"
+        "structural_equation": "F",
+        "initial_value": 1
       },
       "LT": {
         "description": "Train takes the left track",
         "range": [0, 1],
-        "notes": "1 if the train takes the left track, 0 if not"
+        "structural_equation": "not F",
+        "initial_value": 0
       },
       "A": {
         "description": "Train arrives at the destination",
         "range": [0, 1],
-        "notes": "1 if the train arrives, 0 if not"
+        "structural_equation": "RT or LT",
+        "initial_value": 1
       }
-    },
-    "structural_equations": {
-      "LT": "not F",
-      "RT": "F",
-      "A": "RT or LT"
-    },
-    "notes": "The train arrives at its destination regardless of which track it takes, but the track is determined by whether Flipper flips the switch."
+    }
   },
   {
     "id": "v07-short_circuit",
     "title": "Short Circuit",
-    "description": "The dislodgement of a boulder threatens to hit a hiker. However, the threat also provokes a reaction from the hiker – ducking – which prevents the threat from materializing.",
+    "description": "The dislodgement of a boulder threatens to hit a hiker. However, the threat also provokes a reaction from the hiker \u2013 ducking \u2013 which prevents the threat from materializing.",
     "variables": {
       "BD": {
         "description": "Boulder dislodges",
         "range": [0, 1],
-        "notes": "1 if the boulder dislodges, 0 if not"
+        "initial_value": 1
       },
       "B": {
         "description": "Boulder rolls towards hiker",
         "range": [0, 1],
-        "notes": "1 if the boulder rolls towards the hiker, 0 if not"
+        "structural_equation": "BD",
+        "initial_value": 1
       },
       "D": {
         "description": "Hiker ducks",
         "range": [0, 1],
-        "notes": "1 if the hiker ducks, 0 if not"
+        "structural_equation": "BD",
+        "initial_value": 1
       },
       "E": {
         "description": "Hiker gets hit by boulder",
         "range": [0, 1],
-        "notes": "1 if the hiker gets hit by the boulder, 0 if not"
+        "structural_equation": "B and not D",
+        "initial_value": 0
       }
-    },
-    "structural_equations": {
-      "B": "BD",
-      "D": "BD",
-      "E": "B and not D"
-    },
-    "notes": "The dislodgement of the boulder directly causes it to roll toward the hiker and also provokes the hiker to duck. The hiker’s ducking prevents the boulder from hitting them."
+    }
   }
 ]

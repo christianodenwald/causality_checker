@@ -8,7 +8,9 @@ from src.HP2015 import all_splits_with_mandatory_element
 # Paths to JSON files
 vignettes_path = "../data/vignettes.json"
 queries_path = "../data/queries.json"
-
+vignettes_csv_path = "../data_new/vignettes.csv"
+variables_csv_path = "../data_new/variables.csv"
+queries_csv_path = "../data_new/queries.csv"
 
 #### CLASSES
 
@@ -40,14 +42,14 @@ class Vignette:
             information.
     """
 
-    def __init__(self, vignette_id, title, description, variables, ranges, default_values, equations):
+    def __init__(self, vignette_id, title, description, variables, ranges, values, default_values, equations):
         self.vignette_id = vignette_id
         self.title = title
         self.description = description
         self.variables = variables
         self.ranges = ranges
-        self.values = {var: val for var, val in zip(variables.keys(), default_values)}
-        self.default_values = {var: val for var, val in zip(variables.keys(), default_values)}
+        self.values = values
+        self.default_values = default_values
         self.equations = self.parse_equations(equations)
 
     def parse_equations(self, equations):
@@ -127,12 +129,35 @@ class Vignette:
 
 #### METHODS
 
-
 def load_vignettes(json_path):
     """Loads vignettes from a JSON file."""
     with open(json_path, "r") as file:
         data = json.load(file)
 
+    vignettes = dict()
+    for vignette_data in data:
+        variables = vignette_data["variables"]
+        values = {var: details['initial_value'] for var, details in variables.items()}
+        default_values = values.copy()
+        equations = {var: details['structural_equation'] for var, details in variables.items() if 'structural_equation' in details}
+        ranges = {var: info["range"] for var, info in variables.items()}
+
+        vignettes[vignette_data["id"]] = Vignette(
+            vignette_id=vignette_data["id"],
+            title=vignette_data["title"],
+            description=vignette_data["description"],
+            variables=variables,
+            ranges=ranges,
+            values=values,
+            default_values=default_values,
+            equations=equations,
+        )
+
+    return vignettes
+
+def load_vignettes_csv(csv_path):
+    """Loads vignettes from a CSV file."""
+    vignettes_df = pd.read_csv(csv_path)
     vignettes = dict()
     for vignette_data in data:
         variables = vignette_data["variables"]
@@ -152,9 +177,6 @@ def load_vignettes(json_path):
             )
 
     return vignettes
-
-def load_vignettes_csv(csv_path):
-    """Loads vignettes from a CSV file."""
 
 
 
@@ -369,6 +391,15 @@ def compare_theories(queries, vignettes):
 
     return df
 
+def evaluate_theories(queries, theories: list):
+    results = pd.DataFrame()
+
+    for query in queries:
+        query_results = dict()
+        for theory in theories:
+            pass
+        pd.DataFrame.concat([query_results, results[theory]], ignore_index=True) # not sure if this is correct
+    return results
 
 
 

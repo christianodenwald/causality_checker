@@ -153,6 +153,10 @@ def load_vignettes(json_path):
 
     return vignettes
 
+def load_vignettes_csv(csv_path):
+    """Loads vignettes from a CSV file."""
+
+
 
 def load_queries(query_path):
     with open(query_path, 'r') as f:

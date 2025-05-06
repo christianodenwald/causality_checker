@@ -1,5 +1,7 @@
 import itertools
 import json
+
+import numpy as np
 import pandas as pd
 
 from HP2015 import powerset
@@ -42,7 +44,7 @@ class Vignette:
             information.
     """
 
-    def __init__(self, vignette_id, title, description, variables, ranges, values, default_values, equations):
+    def __init__(self, vignette_id, title, description, variables, ranges, values, default_values, values_in_example, equations):
         self.vignette_id = vignette_id
         self.title = title
         self.description = description
@@ -50,6 +52,7 @@ class Vignette:
         self.ranges = ranges
         self.values = values
         self.default_values = default_values
+        self.values_in_example = values_in_example
         self.equations = self.parse_equations(equations)
 
     def parse_equations(self, equations):
@@ -58,7 +61,9 @@ class Vignette:
         """
         parsed_equations = {}
         for var, eq in equations.items():
-            if isinstance(eq, str):  # If it's a string, parse it
+            if eq != None or eq != np.nan:
+                continue
+            elif isinstance(eq, str):  # If it's a string, parse it
                 parsed_equations[var] = lambda values, eq=eq: int(eval(eq, {}, values))
             elif callable(eq):  # If it's already callable, use it directly
                 parsed_equations[var] = eq
@@ -123,6 +128,9 @@ class Vignette:
                 new_value = self.equations[var](self.values)
                 self.set_value(var, new_value)
 
+    def set_values_in_example_from_context(self):
+        pass #TODO
+
     def __repr__(self):
         return f"Vignette({self.vignette_id}, {self.title}, {self.values})"
 
@@ -139,6 +147,7 @@ def load_vignettes(json_path):
         variables = vignette_data["variables"]
         values = {var: details['initial_value'] for var, details in variables.items()}
         default_values = values.copy()
+        values_in_example = values.copy() #TODO
         equations = {var: details['structural_equation'] for var, details in variables.items() if 'structural_equation' in details}
         ranges = {var: info["range"] for var, info in variables.items()}
 
@@ -150,6 +159,7 @@ def load_vignettes(json_path):
             ranges=ranges,
             values=values,
             default_values=default_values,
+            values_in_example=values_in_example,
             equations=equations,
         )
 

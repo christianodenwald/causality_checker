@@ -26,17 +26,34 @@ def load_vignettes_csv(vignettes_csv_path, variables_csv_path):
     vignettes = dict()
 
 
-    for vignette_data in vignettes_df.itertuples(index=True):
+    for j, vignette_data in enumerate(vignettes_df.itertuples(index=True)):
         variable_data = variables_df.loc[variables_df.se_id == vignette_data.se_id]
 
         variables = vignette_data.variable_order
 
-        values = {var: vignette_data.context[i] if i < len(vignette_data.context) else np.nan for i, var in
+        values = {var: int(vignette_data.context[i]) if i < len(vignette_data.context) else np.nan for i, var in
                   enumerate(variables)}
 
-        default_values = dict()
-        for var in variables:
-            default_values[var] = variable_data.loc[variable_data['variable_name'] == var, 'default_values'].iloc[0] if any(variable_data['variable_name'] == var) else None
+        # default_values = dict()
+        # for var in variables:
+        #     # default_values[var] = variable_data.loc[variable_data['variable_name'] == var, 'default_values'].iloc[0] if any(variable_data['variable_name'] == var) else None
+        #     default_values[var] = int(variable_data.loc[variable_data['variable_name'] == var, 'default_values'].iloc[0]) if variable_data.loc[variable_data['variable_name'] == var, 'default_values'].iloc[0] else np.nan
+
+        default_values = {
+            var: (
+                int(variable_data[variable_data['variable_name'] == var]['default_values'].dropna().iloc[0])
+                if (
+                        not variable_data[variable_data['variable_name'] == var]['default_values'].isna().all()
+                        and isinstance(
+                    variable_data[variable_data['variable_name'] == var]['default_values'].dropna().iloc[0],
+                    (int, float))
+                        and variable_data[variable_data['variable_name'] == var]['default_values'].dropna().iloc[
+                            0].is_integer()
+                )
+                else np.nan
+            )
+            for var in variable_data['variable_name'].unique()
+        }
 
         equations = dict()
         for var in variables:
@@ -48,7 +65,7 @@ def load_vignettes_csv(vignettes_csv_path, variables_csv_path):
 
         print(f"Vignette ID: {vignette_data.v_id}")
         vignettes[vignette_data.v_id] = Vignette(
-                vignette_id='v_' + vignette_data.v_id,
+                vignette_id=f'v_{j}_' + vignette_data.v_id,
                 title=vignette_data.title,
                 description=vignette_data.description,
                 variables=variables,
@@ -61,6 +78,6 @@ def load_vignettes_csv(vignettes_csv_path, variables_csv_path):
 
     return vignettes
 
-load_vignettes_csv(vignettes_csv_path, variables_csv_path)
+vignettes = load_vignettes_csv(vignettes_csv_path, variables_csv_path)
 
 print()

@@ -1,0 +1,188 @@
+﻿se_id,variable_name,var_description,range,default_values,deviant_values,structural_equation
+symm_od,MD,Match lit,"0,1",,,
+symm_od,L,Lightning strike,"0,1",,,
+symm_od,FF,Forest fire,"0,1",,,MD or L
+conj,MD,Match lit,"0,1",,,
+conj,L,Lightning strike,"0,1",,,
+conj,FF,Forest fire,"0,1",,,MD and L
+late_preemption,ST,Suzy throws,"0,1",,,
+late_preemption,SH,Suzy hits,"0,1",,,ST
+late_preemption,BT,Billy throws,"0,1",,,
+late_preemption,BH,Billy hits,"0,1",,,BT and not SH
+late_preemption,BS,Bottle shatters,"0,1",,,SH or BH
+backup_prevention,A,Assassin puts poison in coffee,"0,1",,,
+backup_prevention,B,Bodyguard puts antidote in coffee,"0,1",,,
+backup_prevention,D,Victim dies,"0,1",,,A and not B
+loader,A,A loads,"0,1",,,
+loader,B,B shoots,"0,1",,,
+loader,C,C loads and shoots,"0,1",,,
+loader,D,D dies,"0,1",,,(A and B) or C
+three_switches,A,Switch A,"-1,0,1",,,
+three_switches,B,Switch B,"-1,0,1",,,
+three_switches,C,Switch C,"-1,0,1",,,
+three_switches,L,Lamp turns on,"-1,0,1",,,(A==B) or (A==C) or (B==C)
+ff_mechanisms,A,Mechanism A,"0,1",,,L and not MD
+ff_mechanisms,B,Mechanism B,"0,1",,,not L and MD
+ff_mechanisms,C,Mechanism C,"0,1",,,L and MD
+ff_mechanisms,FF,Forest fire ,"0,1",,,A or B or C
+campfire_vote,C,Cowboy vote,"0,1",,,
+campfire_vote,R,Ranger vote,"0,1",,,
+campfire_vote,W,Wrangler vote,"0,1",,,
+campfire_vote,H1,Hand 1 vote,"0,1",,,
+campfire_vote,H2,Hand 2 vote,"0,1",,,
+campfire_vote,O,Outcome,"0,1",,,(((not C or R) and (C or not R)) or ((not C and R and W and H1 and H2) or (C and not R and not W and not H1 and not H2))) and C or (((C and not R) or (not C and R)) and not ((not C and R and W and H1 and H2) or (C and not R and not W and not H1 and not H2)) and ((C + R + W + H1 + H2) >= 3))
+voting,A,A shoots,"0,1",,,
+voting,B,B shoots,"0,1",,,
+voting,C,C shoots,"0,1",,,
+voting,D,D shoots,"0,1",,,
+voting,E,E shoots,"0,1",,,
+voting,F,target falls over,"0,1",,,(A+B+C+D+E) >= 3
+switch,F,Flipper flips switch,"0,1",,,
+switch,T,Train goes on left/right track,"0,1",,,F
+switch,A,Train arrives,"0,1",,,T or not T
+switch2,er,Flipper flips switch,"0,1",,,
+switch2,LB,Left track blocked,"0,1",,,
+switch2,RB,Right track blocked,"0,1",,,
+switch2,A,Train arrives,"0,1",,,
+switch3,F,Flipper flips switch,"0,1",,,
+switch3,LT,Train goes on left track,"0,1",,,
+switch3,RT,Train goes on right track,"0,1",,,
+switch3,A,Train arrives,"0,1",,,
+early_preemption_iso,A,Antidote put in coffee,"0,1",,,
+early_preemption_iso,B,Poison put in coffee,"0,1",,,B
+early_preemption_iso,D,Victim dies,"0,1",,,not A and B
+voting_machine,V1,Vote 1,"0,1",,,
+voting_machine,V2,Vote 2,"0,1",,,
+voting_machine,M,Machine,"0,1,2",,,V1 + V2
+voting_machine,P,Measure passes,"0,1",,,M >= 2
+two_paths,A,,"0,1",,,
+two_paths,B,,"0,1",,,A
+two_paths,C,,"0,1",,,A
+two_paths,D,,"0,1",,,B or C
+default_omission,F,,"0,1",0,1,
+default_omission,C,,"0,1",0,1,
+default_omission,E,,"0,1",0,1,not F and C
+deviant_omission,F,,"0,1",1,0,
+deviant_omission,C,,"0,1",0,1,
+deviant_omission,E,,"0,1",0,1,not F and C
+short_circuit,B,Boulder dislodges,"0,1",,,
+short_circuit,T,Boulder threatens to Hit hiker,"0,1",,,B
+short_circuit,J,Hiker jumps out of the way,"0,1",,,B
+short_circuit,D,Hiker dies,"0,1",,,T and not J
+short_circuit2,B,Boulder dislodges,"0,1",,,
+short_circuit2,J,Hiker jumps out of the way,"0,1",,,B
+short_circuit2,D,Hiker dies,"0,1",,,B and not J
+ext_dp,A,,"0,1",,,
+ext_dp,F,,"0,1",,,
+ext_dp,B,,"0,1",,,F
+ext_dp,C,,"0,1",,,F
+ext_dp,D,,"0,1",,,B and not C
+ext_dp,E,,"0,1",,,A and not D
+mod_ext_dp,A,,"0,1",,,
+mod_ext_dp,G,,"0,1",,,
+mod_ext_dp,F,,"0,1",,,
+mod_ext_dp,B,,"0,1",,,G or F
+mod_ext_dp,C,,"0,1",,,F
+mod_ext_dp,D,,"0,1",,,B and not C
+mod_ext_dp,E,,"0,1",,,A and not D
+iso_mod_ext_dp,A,,"0,1",,,
+iso_mod_ext_dp,G,,"0,1",,,
+iso_mod_ext_dp,C,,"0,1",,,
+iso_mod_ext_dp,B,,"0,1",,,G and not C
+iso_mod_ext_dp,H,,"0,1",,,C
+iso_mod_ext_dp,D,,"0,1",,,B or H
+iso_mod_ext_dp,E,,"0,1",,,A and D
+early_preemption,T,Trainee shoots,"0,1",,,
+early_preemption,S,Supervisor shoots,"0,1",,,not T
+early_preemption,V,Victim dies,"0,1",,,T or S
+double_prevention,C,,"0,1",,,
+double_prevention,D,,"0,1",,,
+double_prevention,B,,"0,1",,,C and not D
+double_prevention,E,,"0,1",,,C and not B
+double_prevention_hall,A,,"0,1",,,
+double_prevention_hall,B,,"0,1",,,
+double_prevention_hall,C,,"0,1",,,
+double_prevention_hall,D,,"0,1",,,B and not C
+double_prevention_hall,E,,"0,1",,,A and not E
+backup_threat_canceling,A,,"0,1",,,
+backup_threat_canceling,B,,"0,1",,,
+backup_threat_canceling,C,,"0,1",,,
+backup_threat_canceling,F,,"0,1",,,
+backup_threat_canceling,H,,"0,1",,,B and not C
+backup_threat_canceling,D,,"0,1",,,H and not F
+backup_threat_canceling,E,,"0,1",,,A and not D
+affecting,A,Assassin puts poison in coffee,"0,1",,,
+affecting,B,Bodyguard puts antidote in coffee,"0,1",,,
+affecting,D,Victim dies not/painfully/painlessly,"0,1,2",,,A(B+1)
+counterexample_transitivity,A,Assassin puts poison in coffee,"0,1",,,
+counterexample_transitivity,B,Bodyguard puts antidote in coffee,"0,1",,,B
+counterexample_transitivity,D,Victim dies,"0,1",,,A and not B
+april_rains,A,April showers,"0,1",,,
+april_rains,M,Thunderstroms in May,"0,1",,,
+april_rains,J,Thunderstroms in June,"0,1",,,
+april_rains,F,"Fire (none, in May, in June)","0,1,2",,,2*(A and (M or J)) + 2*(not A and not M and J) + (not A and M)
+rock_bottle_time,ST,Suzy throws,"0,1",,,
+rock_bottle_time,BT,Billy throws,"0,1",,,
+rock_bottle_time,T3,Person throws at t3,"0,1",,,
+rock_bottle_time,H1,Bottle is hit at t1,"0,1",,,ST
+rock_bottle_time,BS1,Bottle is shattered at t1,"0,1",,,H1
+rock_bottle_time,H2,Bottle is hit at t2,"0,1",,,BT and not BS1
+rock_bottle_time,BS2,Bottle is shattered at t2,"0,1",,,BS1 or H2
+rock_bottle_time,H3,Bottle is hit at t3,"0,1",,,T3 and not BS2
+rock_bottle_time,BS3,Bottle is shattered at t3,"0,1",,,BS2 or H3
+monday_treatment,M,Treatment on Monday,"0,1",,,
+monday_treatment,B,Billy sick,"0,1",,,not M
+monday_treatment_deadly,M,Treatment on Monday,"0,1",,,
+monday_treatment_deadly,T,Treatment on Tuesday,"0,1",,,not T
+monday_treatment_deadly,B,"Billy's medical condition (fine Tu&We; sick Tu and healthy We; sick Tu&We, Sick Tu and dead We)","0,1,2",,,((M or T) and not (M and T)) + 2*(M and T)
+rock_bottle_noisy,ST,Suzy throws,"0,1",,,
+rock_bottle_noisy,N,Noise occurs,"0,1",,,
+rock_bottle_noisy,BT,Billy throws,"0,1",,,
+rock_bottle_noisy,T3,Person throws at t3,"0,1",,,
+rock_bottle_noisy,H1,Bottle is hit at t1,"0,1",,,ST and not N
+rock_bottle_noisy,BS1,Bottle is shattered at t1,"0,1",,,H1
+rock_bottle_noisy,H15,Bottle is hit at t1.5,"0,1",,,ST and N
+rock_bottle_noisy,BS15,Bottle is shattered at t1.5,"0,1",,,H15
+rock_bottle_noisy,H2,Bottle is hit at t2,"0,1",,,BT and not BS15
+rock_bottle_noisy,BS2,Bottle is shattered at t2,"0,1",,,BS15 or H2
+rock_bottle_noisy,H3,Bottle is hit at t3,"0,1",,,T3 and not BS2
+rock_bottle_noisy,BS3,Bottle is shattered at t3,"0,1",,,BS2 or H3
+larry_loanshark,FS,"Fred's finger severed by machine at the factory, and rushed to hospital, and finger reattached","0,1",,,
+larry_loanshark,LL,Larry waits outside Fred's workplace,"0,1",,,
+larry_loanshark,LC,Larry cuts off Fred's finger,"0,1",,,LL and not FS
+larry_loanshark,FF,Finger functional,"0,1",,,(FS or not FS) and not LC
+trumping_preemption,M,Major commands nothing/charge/halt,"0,1,2",,,
+trumping_preemption,S,Sergeant commands charge,"0,1",,,
+trumping_preemption,C,Corporal charges,"0,1",,,M == 1 or (S and (M != 2))
+prevention_overdetermination,C,Fielder catches ball,"0,1",,,
+prevention_overdetermination,W,Wall stops ball,"0,1",,,
+prevention_overdetermination,S,Window shattered,"0,1",,,not C and not W
+shock,A,A flips switch,"0,1",,,
+shock,B,B flips switch,"0,1",,,A
+shock,C,Electrode shocks C,"0,1",,,A == B
+fancy_lamp,A,,"0,1,2",,,
+fancy_lamp,B,,"0,1,2",,,
+fancy_lamp,C,,"0,1,2",,,
+fancy_lamp,N0,No switch in position 0,"0,1",,,not (A==0 or B==0 or C==0)
+fancy_lamp,N1,No switch in position 1,"0,1",,,not (A==1 or B==1 or C==1)
+fancy_lamp,N2,No switch in position 2,"0,1",,,not (A==2 or B==2 or C==2)
+fancy_lamp,L,Lamp on,"0,1",,,N0 or N1 or N2
+marksman_omission,B,B lifts barrel,"0,1",,,
+marksman_omission,A,A aims low,"0,1",,,1-B
+marksman_omission,D,Bullet hits,"0,1",,,1-A
+short_circuit_variation,T,Trigger pulled,"0,1",,,
+short_circuit_variation,H,Hammer cocked,"0,1",,,not T
+short_circuit_variation,C,Round chambered,"0,1",,,T
+short_circuit_variation,F,Gun fires,"0,1",,,H and C
+deflected_bullet,A,A fires,"0,1",,,
+deflected_bullet,B,B fires,"0,1",,,
+deflected_bullet,C,A's shell deflects B's bullet,"0,1",,,A and B
+deflected_bullet,H,Bullseye hit,"0,1",,,(B and not C) or A
+two_loaders,A,A pulls trigger,"0,1",,,
+two_loaders,La,A loads gun,"0,1",,,
+two_loaders,B,B pulls trigger,"0,1",,,
+two_loaders,Lb,B loads gun,"0,1",,,
+two_loaders,H,Bullseye hit,"0,1",,,(A and La) or (B and Lb)
+inevitable_prevention,B,Birth control pills,"0,1",,,
+inevitable_prevention,P,Pregnancy,"0,1",,,not B
+inevitable_prevention,T,Thrombosis,"0,1",,,B or P

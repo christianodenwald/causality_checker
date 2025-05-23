@@ -10,9 +10,9 @@ from src.HP2015 import all_splits_with_mandatory_element
 # Paths to JSON files
 vignettes_path = "../data/vignettes.json"
 queries_path = "../data/queries.json"
-vignettes_csv_path = "../data_new/vignettes.csv"
-variables_csv_path = "../data_new/variables.csv"
-queries_csv_path = "../data_new/queries.csv"
+vignettes_csv_path = "../data/vignettes.csv"
+variables_csv_path = "../data/variables.csv"
+queries_csv_path = "../data/queries.csv"
 
 #### CLASSES
 
@@ -61,9 +61,7 @@ class Vignette:
         """
         parsed_equations = {}
         for var, eq in equations.items():
-            if eq != None or eq != np.nan:
-                continue
-            elif isinstance(eq, str):  # If it's a string, parse it
+            if isinstance(eq, str):  # If it's a string, parse it
                 parsed_equations[var] = lambda values, eq=eq: int(eval(eq, {}, values))
             elif callable(eq):  # If it's already callable, use it directly
                 parsed_equations[var] = eq
@@ -104,9 +102,9 @@ class Vignette:
         else:
             raise ValueError(f"Variable {var} does not exist.")
 
-    def restore_default_values(self):
+    def restore_initial_values(self):
         """Restores all values to their default state without applying equations."""
-        self.values = self.default_values.copy()
+        self.values = self.values_in_example.copy()
 
     def set_exogenous_values(self):
         """Updates exogenous values without triggering updates for dependent values."""
@@ -114,11 +112,11 @@ class Vignette:
             if var in self.equations.keys():
                 self.set_value(var, None)
             else:
-                self.set_value(var, self.default_values[var])
+                self.set_value(var, self.values_in_example[var])
 
     def reset_values(self):
         """Sets all values to None."""
-        for var, value in self.default_values.items():
+        for var, value in self.values_in_example.items():
             self.set_value(var, None)
 
     def propagate_set_values(self):
@@ -146,7 +144,7 @@ def load_vignettes(json_path):
     for vignette_data in data:
         variables = vignette_data["variables"]
         values = {var: details['initial_value'] for var, details in variables.items()}
-        default_values = values.copy()
+        default_values = {var: 0 for var in variables}
         values_in_example = values.copy() #TODO
         equations = {var: details['structural_equation'] for var, details in variables.items() if 'structural_equation' in details}
         ranges = {var: info["range"] for var, info in variables.items()}
@@ -165,35 +163,10 @@ def load_vignettes(json_path):
 
     return vignettes
 
-def load_vignettes_csv(csv_path):
-    """Loads vignettes from a CSV file."""
-    vignettes_df = pd.read_csv(csv_path)
-    vignettes = dict()
-    for vignette_data in data:
-        variables = vignette_data["variables"]
-        default_values = [details['initial_value'] for details in vignette_data['variables'].values()]
-        equations = {var:details['structural_equation'] for var, details in vignette_data['variables'].items() if 'structural_equation' in details}
-
-        # Extract variable ranges
-        ranges = {var: info["range"] for var, info in variables.items()}
-        vignettes[vignette_data["id"]] = Vignette(
-                vignette_id=vignette_data["id"],
-                title=vignette_data["title"],
-                description=vignette_data["description"],
-                variables=variables,
-                ranges=ranges,
-                default_values=default_values,
-                equations=equations,
-            )
-
-    return vignettes
-
-
 
 def load_queries(query_path):
     with open(query_path, 'r') as f:
         return json.load(f)
-
 
 
 def check_causality(theory, vignette, query_json, verbose=True):
@@ -244,17 +217,17 @@ def check_causality(theory, vignette, query_json, verbose=True):
         raise ValueError("Cause or effect variable is not in the vignette.")
 
     ## AC1 is implied
-    if vignette.default_values[cause_variable] != cause_value:
+    if vignette.values_in_example[cause_variable] != cause_value:
         print(query_json)
         print(vignette)
         raise ValueError(
-            f"AC1 condition violated: Default value of '{cause_variable}' ({vignette.default_values[cause_variable]}) "
+            f"AC1 condition violated: Default value of '{cause_variable}' ({vignette.values_in_example[cause_variable]}) "
             f"does not match expected value {cause_value}."
         )
 
-    if vignette.default_values[effect_variable] != effect_value:
+    if vignette.values_in_example[effect_variable] != effect_value:
         raise ValueError(
-            f"AC1 condition violated: Default value of '{effect_variable}' ({vignette.default_values[effect_variable]}) "
+            f"AC1 condition violated: Default value of '{effect_variable}' ({vignette.values_in_example[effect_variable]}) "
             f"does not match expected value {effect_value}."
         )
 
@@ -283,7 +256,7 @@ def check_causality(theory, vignette, query_json, verbose=True):
             # Set X = x' and W = w'
             vignette.set_value(cause_variable, x_prime)
             for var in subset_w:
-                vignette.set_value(var, vignette.default_values[var])
+                vignette.set_value(var, vignette.values_in_example[var])
             # vignette.set_value(cause_variable, x_prime)
             vignette.propagate_set_values()
 
@@ -337,7 +310,7 @@ def check_causality(theory, vignette, query_json, verbose=True):
                         for w in subset_w:
                             vignette.set_value(w, w_setting[w])
                         for z in subset_z:
-                            vignette.set_value(z, vignette.default_values[z])
+                            vignette.set_value(z, vignette.values_in_example[z])
                         vignette.propagate_set_values()
                         if vignette.values[effect_variable] != effect_value:
                             ac2b_satisfied = False

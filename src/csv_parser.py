@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
 from main import Vignette
-vignettes_csv_path = "../data_new/vignettes.csv"
-variables_csv_path = "../data_new/variables.csv"
-queries_csv_path = "../data_new/queries.csv"
+vignettes_csv_path = "../data/vignettes.csv"
+variables_csv_path = "../data/variables.csv"
+queries_csv_path = "../data/queries.csv"
 
 
 
@@ -54,30 +54,58 @@ def load_vignettes_csv(vignettes_csv_path, variables_csv_path):
             )
             for var in variable_data['variable_name'].unique()
         }
+        # default value is 0 if not given
+        default_values = {var: value if not pd.isna(value) else 0 for var, value in default_values.items()}
 
         equations = dict()
-        for var in variables:
-            equations[var] = variable_data.loc[variable_data['variable_name'] == var, 'structural_equation'].iloc[0] if any(variable_data['variable_name'] == var) else None
+        for index, row in variable_data.iterrows():
+            if row['structural_equation'] is not np.nan:
+                equations[row['variable_name']] = row['structural_equation']
+
+        context = dict()
+        context_length = len(vignette_data.context)
+        context_vars = vignette_data.variable_order[:context_length]
+        for i in range(context_length):
+            context[context_vars[i]] = vignette_data.context[i]
+
 
         ranges = dict()
         for var in variables:
             ranges[var] = variable_data.loc[variable_data['variable_name'] == var, 'range'].iloc[0] if any(variable_data['variable_name'] == var) else None
 
+        values_in_example = dict()
+
         print(f"Vignette ID: {vignette_data.v_id}")
         vignettes[vignette_data.v_id] = Vignette(
-                vignette_id=f'v_{j}_' + vignette_data.v_id,
+                vignette_id=f'v{j}_' + vignette_data.v_id,
                 title=vignette_data.title,
                 description=vignette_data.description,
                 variables=variables,
+                context = context,
                 ranges=ranges,
                 values=values,
                 default_values=default_values,
-                values_in_example=default_values,
+                values_in_example=values_in_example,
                 equations=equations,
             )
 
     return vignettes
 
-vignettes = load_vignettes_csv(vignettes_csv_path, variables_csv_path)
+def load_queries_csv(queries_csv_path):
+    """Loads queries from a CSV file."""
+    queries_df = pd.read_csv(queries_csv_path)
+    queries = dict()
+
+    for j, query_data in enumerate(queries_df.itertuples(index=True)):
+        queries[query_data.q_id] = {
+            'query_id': f'q{j}_' + query_data.se_id,
+            'query': query_data.query
+        }
+
+    return queries
+
+if __name__ == '__main__':
+    vignettes = load_vignettes_csv(vignettes_csv_path, variables_csv_path)
+    queries = load_queries_csv(queries_csv_path)
 
 print()

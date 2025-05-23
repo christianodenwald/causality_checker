@@ -160,9 +160,9 @@ prevention_overdetermination,S,Window shattered,"0,1",,,not C and not W
 shock,A,A flips switch,"0,1",,,
 shock,B,B flips switch,"0,1",,,A
 shock,C,Electrode shocks C,"0,1",,,A == B
-fancy_lamp,A,,"0,1,2",,,
-fancy_lamp,B,,"0,1,2",,,
-fancy_lamp,C,,"0,1,2",,,
+fancy_lamp,A,Switch A,"0,1,2",,,
+fancy_lamp,B,Switch B,"0,1,2",,,
+fancy_lamp,C,Switch C,"0,1,2",,,
 fancy_lamp,N0,No switch in position 0,"0,1",,,not (A==0 or B==0 or C==0)
 fancy_lamp,N1,No switch in position 1,"0,1",,,not (A==1 or B==1 or C==1)
 fancy_lamp,N2,No switch in position 2,"0,1",,,not (A==2 or B==2 or C==2)

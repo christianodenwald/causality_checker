@@ -1,11 +1,13 @@
 import itertools
 import json
+import copy
 
 import numpy as np
 import pandas as pd
 
 from HP2015 import powerset
 from src.HP2015 import all_splits_with_mandatory_element
+from src.csv_parser import *
 
 # Paths to JSON files
 vignettes_path = "../data/vignettes.json"
@@ -44,16 +46,18 @@ class Vignette:
             information.
     """
 
-    def __init__(self, vignette_id, title, description, variables, ranges, values, default_values, values_in_example, equations):
+    def __init__(self, vignette_id, title, description, variables, ranges, values, default_values, values_in_example, equations, context):
         self.vignette_id = vignette_id
         self.title = title
         self.description = description
         self.variables = variables
+        self.context = context
         self.ranges = ranges
         self.values = values
         self.default_values = default_values
-        self.values_in_example = values_in_example
+
         self.equations = self.parse_equations(equations)
+        # self.values_in_example = self.set_values_in_example_from_context()
 
     def parse_equations(self, equations):
         """
@@ -127,7 +131,11 @@ class Vignette:
                 self.set_value(var, new_value)
 
     def set_values_in_example_from_context(self):
-        pass #TODO
+        result = copy.deepcopy(self.context)
+        for var in self.variables:
+            if var not in self.context:
+                self.update_single_value(var)
+        return result
 
     def __repr__(self):
         return f"Vignette({self.vignette_id}, {self.title}, {self.values})"
@@ -388,9 +396,11 @@ def evaluate_theories(queries, theories: list):
 
 
 if __name__ == "__main__":
-    vignettes = load_vignettes(vignettes_path)
+    # vignettes = load_vignettes(vignettes_path)
     # vignettes = create_vignettes_with_settings(vignettes_path, settings_path)
-    queries = load_queries(queries_path)
+    # queries = load_queries(queries_path)
+    vignettes = load_vignettes_csv(vignettes_csv_path, variables_csv_path)
+    queries = load_queries_csv(queries_csv_path)
 
     # check_causality('HP2005', vignettes[3], queries[3])
 
@@ -399,7 +409,7 @@ if __name__ == "__main__":
 
     # gt = parse_gt(queries)
 
-    comparison_df = compare_theories(queries, vignettes)
+    # comparison_df = compare_theories(queries, vignettes)
 
 
 print()

@@ -46,7 +46,7 @@ class Vignette:
             information.
     """
 
-    def __init__(self, vignette_id, title, description, variables, ranges, values, default_values, values_in_example, equations, context):
+    def __init__(self, vignette_id, title, description, variables, ranges, values, default_values, equations, context):
         self.vignette_id = vignette_id
         self.title = title
         self.description = description
@@ -57,16 +57,19 @@ class Vignette:
         self.default_values = default_values
 
         self.equations = self.parse_equations(equations)
-        # self.values_in_example = self.set_values_in_example_from_context()
+        self.values_in_example = {}
+        self.values_in_example = self.set_values_in_example_from_context()
 
     def parse_equations(self, equations):
         """
         Converts equation strings into callable functions if they are not already callables.
+        Ensures variables in the values dictionary are converted to integers before evaluation.
         """
         parsed_equations = {}
         for var, eq in equations.items():
             if isinstance(eq, str):  # If it's a string, parse it
-                parsed_equations[var] = lambda values, eq=eq: int(eval(eq, {}, values))
+                parsed_equations[var] = lambda values, eq=eq: int(
+                    eval(eq, {}, {k: int(v) if v is not None else 0 for k, v in values.items()}))
             elif callable(eq):  # If it's already callable, use it directly
                 parsed_equations[var] = eq
             else:
@@ -131,15 +134,22 @@ class Vignette:
                 self.set_value(var, new_value)
 
     def set_values_in_example_from_context(self):
-        result = copy.deepcopy(self.context)
+        values_in_example = {}
         for var in self.variables:
-            if var not in self.context:
-                self.update_single_value(var)
-        return result
+            if var in self.context:
+                values_in_example[var] = self.context[var]
+            else:
+                try:
+                    # Use current values_in_example for equation evaluation, defaulting to None for unset variables
+                    temp_values = {k: v if v is not None else 0 for k, v in values_in_example.items()}
+                    values_in_example[var] = self.equations[var](temp_values)
+                except Exception as e:
+                    raise ValueError(f"Failed to update value for {var}: {e}")
+        self.values_in_example = values_in_example
+        return self.values_in_example
 
     def __repr__(self):
         return f"Vignette({self.vignette_id}, {self.title}, {self.values})"
-
 
 #### METHODS
 
@@ -165,8 +175,9 @@ def load_vignettes(json_path):
             ranges=ranges,
             values=values,
             default_values=default_values,
-            values_in_example=values_in_example,
+            # values_in_example=values_in_example,
             equations=equations,
+            context=[]
         )
 
     return vignettes
@@ -177,7 +188,7 @@ def load_queries(query_path):
         return json.load(f)
 
 
-def check_causality(theory, vignette, query_json, verbose=True):
+def check_causality(theory, vignette, query, verbose=True):
     """
         Determines whether a given query satisfies causality conditions based on a specified theory
         in the context of a given vignette. It checks conditions using the query's cause-effect
@@ -188,7 +199,7 @@ def check_causality(theory, vignette, query_json, verbose=True):
                 The causality theory to be verified (e.g., 'HP2015', 'HP2005').
             vignette: object
                 A vignette model containing variables, equations, and their relationships.
-            query_json: dict
+            query: dict
                 A JSON-like structured dictionary containing details of causality queries with cause-effect pairs and results.
             verbose: bool, optional (default=True)
                 Flag to enable detailed printed output during the evaluation process.
@@ -212,10 +223,15 @@ def check_causality(theory, vignette, query_json, verbose=True):
     if verbose:
         print(f"{vignette.title} ", end='')
 
-    cause = query_json["query"]["cause"]
-    effect = query_json["query"]["effect"]
-    cause_variable, cause_value = next(iter(cause.items()))
-    effect_variable, effect_value = next(iter(effect.items()))
+    if isinstance(query, Query):
+        if len(query.cause.split('=')) == 2: # todo treatment for compound queries
+            cause_variable, cause_value = query.cause.split('=')
+            effect_variable, effect_value = query.effect.split('=')
+    else:
+        cause = query["query"]["cause"]
+        effect = query["query"]["effect"]
+        cause_variable, cause_value = next(iter(cause.items()))
+        effect_variable, effect_value = next(iter(effect.items()))
 
     ### Preparation
     exogenous_vars = {var for var in vignette.variables if var not in vignette.equations}
@@ -226,7 +242,7 @@ def check_causality(theory, vignette, query_json, verbose=True):
 
     ## AC1 is implied
     if vignette.values_in_example[cause_variable] != cause_value:
-        print(query_json)
+        print(query)
         print(vignette)
         raise ValueError(
             f"AC1 condition violated: Default value of '{cause_variable}' ({vignette.values_in_example[cause_variable]}) "
@@ -279,9 +295,9 @@ def check_causality(theory, vignette, query_json, verbose=True):
             if verbose:
                 print('Evaluation: FALSE')
 
-        if query_json["results"][theory] in {0, 1}:
+        if query["results"][theory] in {0, 1}:
             if verbose:
-                print(f'Ground truth: {"TRUE" if query_json["results"][theory] else "FALSE"}\n')
+                print(f'Ground truth: {"TRUE" if query["results"][theory] else "FALSE"}\n')
         else:
             if verbose:
                 print("Ground truth not provided.\n")
@@ -339,7 +355,7 @@ def check_causality(theory, vignette, query_json, verbose=True):
         else:
             if verbose:
                 print("Evaluation: FALSE")
-        print(f"Ground truth: {'TRUE' if query_json['results'][theory] else 'FALSE'}\n")
+        print(f"Ground truth: {'TRUE' if query['results'][theory] else 'FALSE'}\n")
         print("====================\n")
         return evaluation_result
 
@@ -361,8 +377,13 @@ def parse_gt(queries, theory='HP2005'):
 
 def evaluate_theory(vignettes, queries, theory='HP2005'):
     results = dict()
-    for query in queries:
-        results[query['query_id']] = int(check_causality(theory, vignettes[query['vignette_id']], query))
+    if isinstance(queries[0], Query):
+        for query in queries:
+            results[query.query_id] = int(check_causality(theory, vignettes[query.v_id], query.to_json()))
+    else:
+        for query in queries:
+            results[query['query_id']] = int(check_causality(theory, vignettes[query['vignette_id']], query))
+
     return results
 
 def compare_theories(queries, vignettes):
@@ -392,15 +413,22 @@ def evaluate_theories(queries, theories: list):
         pd.DataFrame.concat([query_results, results[theory]], ignore_index=True) # not sure if this is correct
     return results
 
+def evaluate_all_queries_csv(vignettes, queries, theory='HP2015'):
+    results = dict()
+    for i, query in enumerate(queries):
+        print(f"Evaluating query {i}")
+        check_causality(theory, vignettes[query.v_id], query)
+
 
 
 
 if __name__ == "__main__":
-    # vignettes = load_vignettes(vignettes_path)
-    # vignettes = create_vignettes_with_settings(vignettes_path, settings_path)
-    # queries = load_queries(queries_path)
-    vignettes = load_vignettes_csv(vignettes_csv_path, variables_csv_path)
-    queries = load_queries_csv(queries_csv_path)
+    # vignettes_json = load_vignettes(vignettes_path)
+    # # vignettes = create_vignettes_with_settings(vignettes_path, settings_path)
+    # queries_json = load_queries(queries_path)
+    # check_causality('HP2005', vignettes_json['v01-ff_disj'], queries_json[0])
+
+
 
     # check_causality('HP2005', vignettes[3], queries[3])
 
@@ -410,6 +438,12 @@ if __name__ == "__main__":
     # gt = parse_gt(queries)
 
     # comparison_df = compare_theories(queries, vignettes)
+
+    # with csv and Query class
+    vignettes = load_vignettes_csv(vignettes_csv_path, variables_csv_path)
+    queries = load_queries_csv(queries_csv_path)
+    # check_causality('HP2005', vignettes['ff_disj'], queries[0])
+    evaluate_all_queries_csv(vignettes, queries, theory='HP2005')
 
 
 print()

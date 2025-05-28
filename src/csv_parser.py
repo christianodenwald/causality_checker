@@ -140,17 +140,17 @@ def create_query_objects(csv_path):
             v_id=row['v_id'] if pd.notna(row['v_id']) and row['v_id'] != '' else None,
             cause=row['cause'] if pd.notna(row['cause']) and row['cause'] != '' else None,
             effect=row['effect'] if pd.notna(row['effect']) and row['effect'] != '' else None,
-            intuition=float(row['intuition']) if pd.notna(row['intuition']) and row['intuition'] != '' else None,
-            HP01=float(row['HP01']) if pd.notna(row['HP01']) and row['HP01'] != '' else None,
-            HP05=float(row['HP05']) if pd.notna(row['HP05']) and row['HP05'] != '' else None,
-            HP15=float(row['HP15']) if pd.notna(row['HP15']) and row['HP15'] != '' else None,
-            H01=float(row['H01']) if pd.notna(row['H01']) and row['H01'] != '' else None,
-            H07=float(row['H07']) if pd.notna(row['H07']) and row['H07'] != '' else None,
-            Hall=float(row['Hall']) if pd.notna(row['Hall']) and row['Hall'] != '' else None,
-            Baumgartner13=float(row['Baumgartner13']) if pd.notna(row['Baumgartner13']) and row[
+            intuition=int(row['intuition']) if pd.notna(row['intuition']) and row['intuition'] != '' else None,
+            HP01=int(row['HP01']) if pd.notna(row['HP01']) and row['HP01'] != '' else None,
+            HP05=int(row['HP05']) if pd.notna(row['HP05']) and row['HP05'] != '' else None,
+            HP15=int(row['HP15']) if pd.notna(row['HP15']) and row['HP15'] != '' else None,
+            H01=int(row['H01']) if pd.notna(row['H01']) and row['H01'] != '' else None,
+            H07=int(row['H07']) if pd.notna(row['H07']) and row['H07'] != '' else None,
+            Hall=int(row['Hall']) if pd.notna(row['Hall']) and row['Hall'] != '' else None,
+            Baumgartner13=int(row['Baumgartner13']) if pd.notna(row['Baumgartner13']) and row[
                 'Baumgartner13'] != '' else None,
-            AG24=float(row['AG24']) if pd.notna(row['AG24']) and row['AG24'] != '' else None,
-            G21=float(row['G21']) if pd.notna(row['G21']) and row['G21'] != '' else None
+            AG24=int(row['AG24']) if pd.notna(row['AG24']) and row['AG24'] != '' else None,
+            G21=int(row['G21']) if pd.notna(row['G21']) and row['G21'] != '' else None
         )
         query_objects.append(query)
     return query_objects

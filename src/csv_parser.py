@@ -73,7 +73,7 @@ def load_vignettes_csv(vignettes_csv_path, variables_csv_path):
         for var in variables:
             ranges[var] = variable_data.loc[variable_data['variable_name'] == var, 'range'].iloc[0] if any(variable_data['variable_name'] == var) else None
 
-        values_in_example = dict()
+        # values_in_example = dict()
 
         print(f"Vignette ID: {vignette_data.v_id}")
         vignettes[vignette_data.v_id] = Vignette(
@@ -85,24 +85,12 @@ def load_vignettes_csv(vignettes_csv_path, variables_csv_path):
                 ranges=ranges,
                 values=values,
                 default_values=default_values,
-                values_in_example=values_in_example,
                 equations=equations,
+                # values_in_example=values_in_example,
             )
 
     return vignettes
 
-def load_queries_csv(queries_csv_path):
-    """Loads queries from a CSV file."""
-    queries_df = pd.read_csv(queries_csv_path)
-    queries = dict()
-
-    for j, query_data in enumerate(queries_df.itertuples(index=True)):
-        queries[query_data.v_id] = {
-            'query_id': f'q{j}_' + query_data.v_id,
-            'query': query_data.query
-        }
-
-    return queries
 
 
 class Query:
@@ -129,7 +117,7 @@ class Query:
 
 
 # Function to create Query objects from CSV file
-def create_query_objects(csv_path):
+def load_queries_csv(csv_path):
     # Load the DataFrame from the CSV file
     df = pd.read_csv(csv_path)
 
@@ -158,5 +146,5 @@ def create_query_objects(csv_path):
 if __name__ == '__main__':
     vignettes = load_vignettes_csv(vignettes_csv_path, variables_csv_path)
     # queries = load_queries_csv(queries_csv_path)
-    queries = create_query_objects(queries_csv_path)
+    queries = load_queries_csv(queries_csv_path)
 print()

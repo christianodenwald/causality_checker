@@ -37,19 +37,19 @@ voting,C,C shoots,"0,1",,,
 voting,D,D shoots,"0,1",,,
 voting,E,E shoots,"0,1",,,
 voting,F,target falls over,"0,1",,,(A+B+C+D+E) >= 3
-switch,F,Flipper flips switch,"0,1",,,
-switch,T,Train goes on left/right track,"0,1",,,F
-switch,A,Train arrives,"0,1",,,T or not T
-switch2,er,Flipper flips switch,"0,1",,,
+switch1,F,Flipper flips switch,"0,1",,,
+switch1,T,Train goes on left/right track,"0,1",,,F
+switch1,A,Train arrives,"0,1",,,T or not T
+switch2,F,Flipper flips switch,"0,1",,,
 switch2,LB,Left track blocked,"0,1",,,
 switch2,RB,Right track blocked,"0,1",,,
-switch2,A,Train arrives,"0,1",,,
+switch2,A,Train arrives,"0,1",,,(not F and not LB) or (F and not RB)
 switch3,F,Flipper flips switch,"0,1",,,
-switch3,LT,Train goes on left track,"0,1",,,
-switch3,RT,Train goes on right track,"0,1",,,
-switch3,A,Train arrives,"0,1",,,
+switch3,LT,Train goes on left track,"0,1",,,not F
+switch3,RT,Train goes on right track,"0,1",,,F
+switch3,A,Train arrives,"0,1",,,LT or RT
 early_preemption_iso,A,Antidote put in coffee,"0,1",,,
-early_preemption_iso,B,Poison put in coffee,"0,1",,,B
+early_preemption_iso,B,Poison put in coffee,"0,1",,,A
 early_preemption_iso,D,Victim dies,"0,1",,,not A and B
 voting_machine,V1,Vote 1,"0,1",,,
 voting_machine,V2,Vote 2,"0,1",,,
@@ -103,7 +103,7 @@ double_prevention_hall,A,,"0,1",,,
 double_prevention_hall,B,,"0,1",,,
 double_prevention_hall,C,,"0,1",,,
 double_prevention_hall,D,,"0,1",,,B and not C
-double_prevention_hall,E,,"0,1",,,A and not E
+double_prevention_hall,E,,"0,1",,,A and not D
 backup_threat_canceling,A,,"0,1",,,
 backup_threat_canceling,B,,"0,1",,,
 backup_threat_canceling,C,,"0,1",,,
@@ -113,9 +113,9 @@ backup_threat_canceling,D,,"0,1",,,H and not F
 backup_threat_canceling,E,,"0,1",,,A and not D
 affecting,A,Assassin puts poison in coffee,"0,1",,,
 affecting,B,Bodyguard puts antidote in coffee,"0,1",,,
-affecting,D,Victim dies not/painfully/painlessly,"0,1,2",,,A(B+1)
+affecting,D,Victim dies not/painfully/painlessly,"0,1,2",,,A*(B+1)
 counterexample_transitivity,A,Assassin puts poison in coffee,"0,1",,,
-counterexample_transitivity,B,Bodyguard puts antidote in coffee,"0,1",,,B
+counterexample_transitivity,B,Bodyguard puts antidote in coffee,"0,1",,,A
 counterexample_transitivity,D,Victim dies,"0,1",,,A and not B
 april_rains,A,April showers,"0,1",,,
 april_rains,M,Thunderstroms in May,"0,1",,,
@@ -133,7 +133,7 @@ rock_bottle_time,BS3,Bottle is shattered at t3,"0,1",,,BS2 or H3
 monday_treatment,M,Treatment on Monday,"0,1",,,
 monday_treatment,B,Billy sick,"0,1",,,not M
 monday_treatment_deadly,M,Treatment on Monday,"0,1",,,
-monday_treatment_deadly,T,Treatment on Tuesday,"0,1",,,not T
+monday_treatment_deadly,T,Treatment on Tuesday,"0,1",,,not M
 monday_treatment_deadly,B,"Billy's medical condition (fine Tu&We; sick Tu and healthy We; sick Tu&We, Sick Tu and dead We)","0,1,2",,,((M or T) and not (M and T)) + 2*(M and T)
 rock_bottle_noisy,ST,Suzy throws,"0,1",,,
 rock_bottle_noisy,N,Noise occurs,"0,1",,,

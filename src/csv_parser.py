@@ -97,15 +97,66 @@ def load_queries_csv(queries_csv_path):
     queries = dict()
 
     for j, query_data in enumerate(queries_df.itertuples(index=True)):
-        queries[query_data.q_id] = {
-            'query_id': f'q{j}_' + query_data.se_id,
+        queries[query_data.v_id] = {
+            'query_id': f'q{j}_' + query_data.v_id,
             'query': query_data.query
         }
 
     return queries
 
+
+class Query:
+    def __init__(self, v_id, cause, effect, intuition, HP01, HP05, HP15, H01, H07, Hall, Baumgartner13, AG24, G21):
+        self.v_id = v_id
+        self.cause = cause
+        self.effect = effect
+        self.groundtruth = {
+            'intuition': intuition,
+            'HP01': HP01,
+            'HP05': HP05,
+            'HP15': HP15,
+            'H01': H01,
+            'H07': H07,
+            'Hall': Hall,
+            'Baumgartner13': Baumgartner13,
+            'AG24': AG24,
+            'G21': G21
+        }
+
+    def __repr__(self):
+        return (f"Query(v_id={self.v_id}, cause={self.cause}, effect={self.effect}, "
+                f"groundtruth={self.groundtruth})")
+
+
+# Function to create Query objects from CSV file
+def create_query_objects(csv_path):
+    # Load the DataFrame from the CSV file
+    df = pd.read_csv(csv_path)
+
+    query_objects = []
+    for _, row in df.iterrows():
+        # Replace NaN or empty strings with None
+        query = Query(
+            v_id=row['v_id'] if pd.notna(row['v_id']) and row['v_id'] != '' else None,
+            cause=row['cause'] if pd.notna(row['cause']) and row['cause'] != '' else None,
+            effect=row['effect'] if pd.notna(row['effect']) and row['effect'] != '' else None,
+            intuition=float(row['intuition']) if pd.notna(row['intuition']) and row['intuition'] != '' else None,
+            HP01=float(row['HP01']) if pd.notna(row['HP01']) and row['HP01'] != '' else None,
+            HP05=float(row['HP05']) if pd.notna(row['HP05']) and row['HP05'] != '' else None,
+            HP15=float(row['HP15']) if pd.notna(row['HP15']) and row['HP15'] != '' else None,
+            H01=float(row['H01']) if pd.notna(row['H01']) and row['H01'] != '' else None,
+            H07=float(row['H07']) if pd.notna(row['H07']) and row['H07'] != '' else None,
+            Hall=float(row['Hall']) if pd.notna(row['Hall']) and row['Hall'] != '' else None,
+            Baumgartner13=float(row['Baumgartner13']) if pd.notna(row['Baumgartner13']) and row[
+                'Baumgartner13'] != '' else None,
+            AG24=float(row['AG24']) if pd.notna(row['AG24']) and row['AG24'] != '' else None,
+            G21=float(row['G21']) if pd.notna(row['G21']) and row['G21'] != '' else None
+        )
+        query_objects.append(query)
+    return query_objects
+
 if __name__ == '__main__':
     vignettes = load_vignettes_csv(vignettes_csv_path, variables_csv_path)
-    queries = load_queries_csv(queries_csv_path)
-
+    # queries = load_queries_csv(queries_csv_path)
+    queries = create_query_objects(queries_csv_path)
 print()

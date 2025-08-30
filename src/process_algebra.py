@@ -1,7 +1,7 @@
 import pandas as pd
 
-vignettes_csv_path = "../data_new/vignettes.csv"
-variables_csv_path = "../data_new/variables.csv"
+vignettes_csv_path = "../data/vignettes.csv"
+variables_csv_path = "../data/variables.csv"
 
 
 def generate_process_algebra_latex(structural_equations_dict):
@@ -9,7 +9,13 @@ def generate_process_algebra_latex(structural_equations_dict):
     Generate LaTeX code for process algebra from a dictionary of structural equations.
     Each key is a vignette ID, and each value is a list of structural equations.
     """
-    latex_code = ""
+    latex_code = """\\documentclass{article}
+    \\usepackage{amsmath}
+    \\usepackage{array}
+    \\usepackage[margin=1in]{geometry}
+      \\setlength{\\parindent}{0pt}
+    \\begin{document}
+    """
 
     # Iterate over each vignette in the dictionary
     for v_id, equations in structural_equations_dict.items():
@@ -58,15 +64,31 @@ def generate_process_algebra_latex(structural_equations_dict):
 
         # Generate LaTeX section for this vignette
         if process_algebra:  # Only add section if there are valid expressions
-            latex_code += f"\\section{{Vignette {v_id}}}\n"
+            latex_v_id = v_id.replace("_", " ")
+            latex_code += f"\\section{{{latex_v_id}}}\n"
+
+            # add structural equations part
+            latex_code += f"\\begin{{center}}\n" \
+                          f"\\begin{{tabular}}{{p{{0.45\\textwidth}} p{{0.45\\textwidth}}}}\n" \
+                          f"\\textbf{{Structural Equations}} & \\textbf{{Process algebra}} \\\\\n" \
+                          f"\\hline\n" \
+                          f"\\begin{{itemize}}\n"
+            for eq in equations:
+                latex_eq = eq.replace("and", "\\land").replace("or", "\\lor").replace("not", "\\lnot")
+                latex_code += f"    \\item ${latex_eq}$\n"
+            latex_code += f"\\end{{itemize}} &\n"
+
+            # add process algebra part
             latex_code += "\\begin{itemize}\n"
             for expr in process_algebra:
                 latex_code += f"    \\item ${expr}$,\n"
-            latex_code += "\\end{itemize}\n\n"
+            latex_code += "\\end{itemize}\n\\end{tabular}\n\\end{center}\n\n"
 
     # If no valid LaTeX code was generated, add a placeholder
     if not latex_code:
         latex_code = "% No valid process algebra expressions generated.\n"
+
+    latex_code += "\\end{document}\n"
 
     return latex_code
 

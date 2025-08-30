@@ -10,9 +10,9 @@ late_preemption,SH,Suzy hits,"0,1",,,ST
 late_preemption,BT,Billy throws,"0,1",,,
 late_preemption,BH,Billy hits,"0,1",,,BT and not SH
 late_preemption,BS,Bottle shatters,"0,1",,,SH or BH
-backup_prevention,A,Assassin puts poison in coffee,"0,1",,,
-backup_prevention,B,Bodyguard puts antidote in coffee,"0,1",,,
-backup_prevention,D,Victim dies,"0,1",,,A and not B
+prevention,A,Assassin puts poison in coffee,"0,1",,,
+prevention,B,Bodyguard puts antidote in coffee,"0,1",,,
+prevention,D,Victim dies,"0,1",,,A and not B
 loader,A,A loads,"0,1",,,
 loader,B,B shoots,"0,1",,,
 loader,C,C loads and shoots,"0,1",,,
@@ -21,6 +21,8 @@ three_switches,A,Switch A,"-1,0,1",,,
 three_switches,B,Switch B,"-1,0,1",,,
 three_switches,C,Switch C,"-1,0,1",,,
 three_switches,L,Lamp turns on,"-1,0,1",,,(A==B) or (A==C) or (B==C)
+ff_mechanisms,MD,Match lit,"0,1",,,
+ff_mechanisms,L,Lightning strike,"0,1",,,
 ff_mechanisms,A,Mechanism A,"0,1",,,L and not MD
 ff_mechanisms,B,Mechanism B,"0,1",,,not L and MD
 ff_mechanisms,C,Mechanism C,"0,1",,,L and MD
@@ -59,19 +61,19 @@ two_paths,A,,"0,1",,,
 two_paths,B,,"0,1",,,A
 two_paths,C,,"0,1",,,A
 two_paths,D,,"0,1",,,B or C
-default_omission,F,,"0,1",0,1,
-default_omission,C,,"0,1",0,1,
-default_omission,E,,"0,1",0,1,not F and C
-deviant_omission,F,,"0,1",1,0,
-deviant_omission,C,,"0,1",0,1,
-deviant_omission,E,,"0,1",0,1,not F and C
-short_circuit,B,Boulder dislodges,"0,1",,,
-short_circuit,T,Boulder threatens to Hit hiker,"0,1",,,B
-short_circuit,J,Hiker jumps out of the way,"0,1",,,B
-short_circuit,D,Hiker dies,"0,1",,,T and not J
-short_circuit2,B,Boulder dislodges,"0,1",,,
-short_circuit2,J,Hiker jumps out of the way,"0,1",,,B
-short_circuit2,D,Hiker dies,"0,1",,,B and not J
+default_omission,F,The Queen waters my plant,"0,1",0,1,
+default_omission,C,Plant dries up,"0,1",1,0,
+default_omission,E,Plant dies,"0,1",0,1,not F and C
+deviant_omission,F,Neighbor waters my plant,"0,1",1,0,
+deviant_omission,C,Plant dries up,"0,1",1,0,
+deviant_omission,E,Plant dies,"0,1",0,1,not F and C
+double_omission,B,Billy waters plant,"0,1",1,0,
+double_omission,P,Putin waters plant,"0,1",0,1,
+double_omission,D,Plant dies,"0,1",0,1,B or P
+short_circuit,F,Boulder dislodges,"0,1",,,
+short_circuit,B,Boulder threatens to hit hiker,"0,1",,,F
+short_circuit,D,Hiker ducks at the right moment,"0,1",,,F
+short_circuit,E,Hiker dies,"0,1",,,B and not D
 ext_dp,A,,"0,1",,,
 ext_dp,F,,"0,1",,,
 ext_dp,B,,"0,1",,,F
@@ -99,11 +101,11 @@ double_prevention,C,,"0,1",,,
 double_prevention,D,,"0,1",,,
 double_prevention,B,,"0,1",,,C and not D
 double_prevention,E,,"0,1",,,C and not B
-double_prevention_hall,A,,"0,1",,,
-double_prevention_hall,B,,"0,1",,,
-double_prevention_hall,C,,"0,1",,,
-double_prevention_hall,D,,"0,1",,,B and not C
-double_prevention_hall,E,,"0,1",,,A and not D
+double_prevention_hall,A,Family goes to bed,"0,1",,,
+double_prevention_hall,B,Thief intends to break into house,"0,1",,,
+double_prevention_hall,C,Police patrols the vicinity of the house,"0,1",,,
+double_prevention_hall,D,Police catches thief before entering the house,"0,1",,,B and not C
+double_prevention_hall,E,Family sleeps peacefully through the night,"0,1",,,A and not D
 backup_threat_canceling,A,,"0,1",,,
 backup_threat_canceling,B,,"0,1",,,
 backup_threat_canceling,C,,"0,1",,,
@@ -134,7 +136,7 @@ monday_treatment,M,Treatment on Monday,"0,1",,,
 monday_treatment,B,Billy sick,"0,1",,,not M
 monday_treatment_deadly,M,Treatment on Monday,"0,1",,,
 monday_treatment_deadly,T,Treatment on Tuesday,"0,1",,,not M
-monday_treatment_deadly,B,"Billy's medical condition (fine Tu&We; sick Tu and healthy We; sick Tu&We, Sick Tu and dead We)","0,1,2",,,((M or T) and not (M and T)) + 2*(M and T)
+monday_treatment_deadly,B,"Billy's medical condition (fine Tu&We; sick Tu and healthy We; sick Tu&We, Sick Tu and dead We)","0,1,2,3",,,0 * (M and not T) + 1 * (not M and T) + 2 * (not M and not T) + 3 * (M and T)
 rock_bottle_noisy,ST,Suzy throws,"0,1",,,
 rock_bottle_noisy,N,Noise occurs,"0,1",,,
 rock_bottle_noisy,BT,Billy throws,"0,1",,,
@@ -170,6 +172,11 @@ fancy_lamp,L,Lamp on,"0,1",,,N0 or N1 or N2
 marksman_omission,B,B lifts barrel,"0,1",,,
 marksman_omission,A,A aims low,"0,1",,,1-B
 marksman_omission,D,Bullet hits,"0,1",,,1-A
+unloaded_gun,A,marksman aims at target,"0,1",,,
+unloaded_gun,C,marksman cocks gun,"0,1",,,
+unloaded_gun,P,marksman pulls trigger,"0,1",,,
+unloaded_gun,F,gun fires,"0,1",,,A and C and P
+unloaded_gun,D,victim dies,"0,1",,,F
 short_circuit_variation,T,Trigger pulled,"0,1",,,
 short_circuit_variation,H,Hammer cocked,"0,1",,,not T
 short_circuit_variation,C,Round chambered,"0,1",,,T

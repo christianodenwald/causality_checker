@@ -66,13 +66,17 @@ def load_vignettes_csv(vignettes_csv_path, variables_csv_path):
         context_length = len(vignette_data.context)
         context_vars = vignette_data.variable_order[:context_length]
         for i in range(context_length):
-            context[context_vars[i]] = vignette_data.context[i]
+            context[context_vars[i]] = int(vignette_data.context[i])
 
 
         ranges = dict()
         for var in variables:
-            ranges[var] = variable_data.loc[variable_data['variable_name'] == var, 'range'].iloc[0] if any(variable_data['variable_name'] == var) else None
-
+            range_str = variable_data.loc[variable_data['variable_name'] == var, 'range'].iloc[0] if any(
+                variable_data['variable_name'] == var) else None
+            if range_str is not None:
+                ranges[var] = [int(x) for x in range_str]
+            else:
+                ranges[var] = None
         # values_in_example = dict()
 
         print(f"Vignette ID: {vignette_data.v_id}")

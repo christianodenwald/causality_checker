@@ -1,6 +1,8 @@
 import itertools
 import json
 import copy
+import warnings
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -8,6 +10,7 @@ import pandas as pd
 from HP2015 import powerset
 from src.HP2015 import all_splits_with_mandatory_element
 from src.csv_parser import *
+from data.paper_examples import *
 
 # Paths to JSON files
 vignettes_path = "../data/vignettes.json"
@@ -188,7 +191,8 @@ def load_queries(query_path):
         return json.load(f)
 
 
-def check_causality(theory, vignette, query, verbose=True):
+def check_causality(theory, vignette, query, gt='intuition', verbose=True):
+
     """
         Determines whether a given query satisfies causality conditions based on a specified theory
         in the context of a given vignette. It checks conditions using the query's cause-effect
@@ -226,7 +230,13 @@ def check_causality(theory, vignette, query, verbose=True):
     if isinstance(query, Query):
         if len(query.cause.split('=')) == 2: # todo treatment for compound queries
             cause_variable, cause_value = query.cause.split('=')
+            cause_value = int(cause_value)
             effect_variable, effect_value = query.effect.split('=')
+            effect_value = int(effect_value)
+        else:
+            # warnings.warn('Query format not supported. Probably a compound query.')
+            print('\nWarning: Query format not supported. Probably a compound query.\n====================\n')
+            return
     else:
         cause = query["query"]["cause"]
         effect = query["query"]["effect"]
@@ -244,16 +254,18 @@ def check_causality(theory, vignette, query, verbose=True):
     if vignette.values_in_example[cause_variable] != cause_value:
         print(query)
         print(vignette)
-        raise ValueError(
-            f"AC1 condition violated: Default value of '{cause_variable}' ({vignette.values_in_example[cause_variable]}) "
-            f"does not match expected value {cause_value}."
+        print(
+            f"AC1 condition violated: Actual value of '{cause_variable}' ({vignette.values_in_example[cause_variable]}) "
+            f"does not match expected value {cause_value}.\n====================\n"
         )
+        return False
 
     if vignette.values_in_example[effect_variable] != effect_value:
-        raise ValueError(
-            f"AC1 condition violated: Default value of '{effect_variable}' ({vignette.values_in_example[effect_variable]}) "
+        print(
+            f"AC1 condition violated: Actual value of '{effect_variable}' ({vignette.values_in_example[effect_variable]}) "
             f"does not match expected value {effect_value}."
         )
+        return False
 
     if theory == 'HP2015':
         evaluation_result = False
@@ -263,10 +275,11 @@ def check_causality(theory, vignette, query, verbose=True):
 
         ### AC2am
         # Find x' (an alternative value for the cause variable)
-        x_prime = next(
-            (val for val in vignette.variables[cause_variable]['range'] if val != cause_value),
-            None
-        )
+        x_prime= next((val for val in vignette.ranges[cause_variable] if val != cause_value), None)
+        # x_prime = next(
+        #     (val for val in vignette.variables[cause_variable]['range'] if val != cause_value),
+        #     None
+        # )
 
         if x_prime is None:
             raise ValueError(f"No alternative value found for {cause_variable}.")
@@ -312,12 +325,12 @@ def check_causality(theory, vignette, query, verbose=True):
 
         evaluation_result = False
         for Z, W in all_splits_with_mandatory_element(vignette.variables, cause_variable):
-            for x_prime in vignette.variables[cause_variable]['range']:
+            for x_prime in vignette.ranges[cause_variable]:
                 if x_prime == cause_value:
                     continue
                 for w_setting in (
                         {var: value for var, value in zip(W, w_settings)}
-                        for w_settings in itertools.product(*[vignette.variables[var]['range'] for var in W])
+                        for w_settings in itertools.product(*[vignette.ranges[var] for var in W])
                 ):
                     vignette.reset_values()
                     vignette.set_exogenous_values()
@@ -355,7 +368,7 @@ def check_causality(theory, vignette, query, verbose=True):
         else:
             if verbose:
                 print("Evaluation: FALSE")
-        print(f"Ground truth: {'TRUE' if query['results'][theory] else 'FALSE'}\n")
+        print(f"Ground truth: {'TRUE' if query.groundtruth[gt] else 'FALSE'}\n") # todo: add option if gt is not provided
         print("====================\n")
         return evaluation_result
 
@@ -413,12 +426,27 @@ def evaluate_theories(queries, theories: list):
         pd.DataFrame.concat([query_results, results[theory]], ignore_index=True) # not sure if this is correct
     return results
 
-def evaluate_all_queries_csv(vignettes, queries, theory='HP2015'):
+def evaluate_all_queries_csv(vignettes, queries, theory='HP2015', gt='intuition', skip:List=None):
     results = dict()
+    print("\n====================\n")
     for i, query in enumerate(queries):
+        if skip and query.v_id in skip:
+            print(f"Skipping query {i} for vignette {query.v_id}\n====================\n")
+            continue
         print(f"Evaluating query {i}")
-        check_causality(theory, vignettes[query.v_id], query)
+        check_causality(theory, vignettes[query.v_id], query, gt=gt)
 
+def reproduce_paper_results(vignettes, queries, query_list=HP2005_examples, theory='HP2005', gt='intuition', skip:List=None):
+    results = dict()
+    query_list = HP2005_examples
+    print("\n====================\n")
+    for i, query in enumerate(queries):
+        if skip and query.v_id in skip:
+            print(f"Skipping query {i} for vignette {query.v_id}\n====================\n")
+            continue
+        if query.v_id in query_list:
+            print(f"Evaluating query {i}")
+            check_causality(theory, vignettes[query.v_id], query, gt=gt)
 
 
 
@@ -443,7 +471,11 @@ if __name__ == "__main__":
     vignettes = load_vignettes_csv(vignettes_csv_path, variables_csv_path)
     queries = load_queries_csv(queries_csv_path)
     # check_causality('HP2005', vignettes['ff_disj'], queries[0])
-    evaluate_all_queries_csv(vignettes, queries, theory='HP2005')
+    skip = ['rock_bottle_noisy', 'rock_bottle_time']
+    evaluate_all_queries_csv(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
+
+    reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
+    reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
 
 
 print()

@@ -56,7 +56,7 @@ early_preemption_iso,D,Victim dies,"0,1",,,not A and B
 voting_machine,V1,Vote 1,"0,1",,,
 voting_machine,V2,Vote 2,"0,1",,,
 voting_machine,M,Machine,"0,1,2",,,V1 + V2
-voting_machine,P,Measure passes,"0,1",,,M >= 2
+voting_machine,P,Measure passes,"0,1",,,M >= 1
 two_paths,A,,"0,1",,,
 two_paths,B,,"0,1",,,A
 two_paths,C,,"0,1",,,A

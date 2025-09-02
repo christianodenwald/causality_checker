@@ -252,12 +252,17 @@ def check_causality(theory, vignette, query, gt='intuition', verbose=True):
 
     ## AC1 is implied
     if vignette.values_in_example[cause_variable] != cause_value:
-        print(query)
-        print(vignette)
-        print(
-            f"AC1 condition violated: Actual value of '{cause_variable}' ({vignette.values_in_example[cause_variable]}) "
-            f"does not match expected value {cause_value}.\n====================\n"
-        )
+        if verbose:
+            # print(query)
+            # print(vignette)
+            print(f"(Theory: {theory})")
+            print(f"Query: {cause_variable}={cause_value} is actual cause of {effect_variable}={effect_value}")
+
+            print(f'Evaluation: FALSE\nGround truth: {"TRUE" if query.groundtruth[gt] else "FALSE"}\n') # todo: add option if gt is not provided
+            print(
+                f"AC1 condition violated: Actual value of '{cause_variable}' ({vignette.values_in_example[cause_variable]}) "
+                f"does not match expected value {cause_value}.\n====================\n"
+            )
         return False
 
     if vignette.values_in_example[effect_variable] != effect_value:
@@ -308,9 +313,10 @@ def check_causality(theory, vignette, query, gt='intuition', verbose=True):
             if verbose:
                 print('Evaluation: FALSE')
 
-        if query["results"][theory] in {0, 1}:
+        if query.groundtruth[gt] in {0, 1}:
             if verbose:
-                print(f'Ground truth: {"TRUE" if query["results"][theory] else "FALSE"}\n')
+                # print(f'Ground truth: {"TRUE" if query["results"][theory] else "FALSE"}\n')
+                print(f"Ground truth: {'TRUE' if query.groundtruth[gt] else 'FALSE'}\n")
         else:
             if verbose:
                 print("Ground truth not provided.\n")
@@ -438,15 +444,16 @@ def evaluate_all_queries_csv(vignettes, queries, theory='HP2015', gt='intuition'
 
 def reproduce_paper_results(vignettes, queries, query_list=HP2005_examples, theory='HP2005', gt='intuition', skip:List=None):
     results = dict()
-    query_list = HP2005_examples
+    if not query_list:
+        query_list = HP2005_examples
     print("\n====================\n")
     for i, query in enumerate(queries):
-        if skip and query.v_id in skip:
-            print(f"Skipping query {i} for vignette {query.v_id}\n====================\n")
-            continue
         if query.v_id in query_list:
-            print(f"Evaluating query {i}")
-            check_causality(theory, vignettes[query.v_id], query, gt=gt)
+            if skip and query.v_id in skip:
+                print(f"Skipping query {i} for vignette {query.v_id}\n====================\n")
+            else:
+                print(f"Evaluating query {i}")
+                check_causality(theory, vignettes[query.v_id], query, gt=gt)
 
 
 
@@ -472,9 +479,9 @@ if __name__ == "__main__":
     queries = load_queries_csv(queries_csv_path)
     # check_causality('HP2005', vignettes['ff_disj'], queries[0])
     skip = ['rock_bottle_noisy', 'rock_bottle_time']
-    evaluate_all_queries_csv(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
+    # evaluate_all_queries_csv(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
 
-    reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
+    # reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
     reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
 
 

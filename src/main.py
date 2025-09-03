@@ -3,13 +3,16 @@ import json
 import copy
 import warnings
 from typing import List
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
 import pandas as pd
 
 from HP2015 import powerset
-from src.HP2015 import all_splits_with_mandatory_element
-from src.csv_parser import *
+from HP2015 import all_splits_with_mandatory_element
+from csv_parser import *
 from data.paper_examples import *
 
 # Paths to JSON files
@@ -235,7 +238,7 @@ def check_causality(theory, vignette, query, gt='intuition', verbose=True):
             effect_value = int(effect_value)
         else:
             # warnings.warn('Query format not supported. Probably a compound query.')
-            print('\nWarning: Query format not supported. Probably a compound query.\n====================\n')
+            print('\nWarning: Query format not supported. Probably a compound query.\n\n====================\n')
             return
     else:
         cause = query["query"]["cause"]
@@ -257,18 +260,20 @@ def check_causality(theory, vignette, query, gt='intuition', verbose=True):
             # print(vignette)
             print(f"(Theory: {theory})")
             print(f"Query: {cause_variable}={cause_value} is actual cause of {effect_variable}={effect_value}")
-
-            print(f'Evaluation: FALSE\nGround truth: {"TRUE" if query.groundtruth[gt] else "FALSE"}\n') # todo: add option if gt is not provided
+            # if query.query_text:
+            #     print(f"— {query.query_text}") # todo: add query text to Query class
+            if query.groundtruth[gt] in {0, 1}:
+                print(f'Evaluation: FALSE\nGround truth: {"TRUE" if query.groundtruth[gt] else "FALSE"}')
             print(
-                f"AC1 condition violated: Actual value of '{cause_variable}' ({vignette.values_in_example[cause_variable]}) "
-                f"does not match expected value {cause_value}.\n====================\n"
+                f"AC1 condition violated: Actual value of cause '{cause_variable}' ({vignette.values_in_example[cause_variable]}) "
+                f"does not match expected value {cause_value}.\n\n====================\n"
             )
         return False
 
     if vignette.values_in_example[effect_variable] != effect_value:
         print(
-            f"AC1 condition violated: Actual value of '{effect_variable}' ({vignette.values_in_example[effect_variable]}) "
-            f"does not match expected value {effect_value}."
+            f"AC1 condition violated: Actual value of effect '{effect_variable}' ({vignette.values_in_example[effect_variable]}) "
+            f"does not match expected value {effect_value}.\n"
         )
         return False
 
@@ -313,14 +318,12 @@ def check_causality(theory, vignette, query, gt='intuition', verbose=True):
             if verbose:
                 print('Evaluation: FALSE')
 
-        if query.groundtruth[gt] in {0, 1}:
-            if verbose:
+        if verbose:
+            if query.groundtruth[gt] in {0, 1}:
                 # print(f'Ground truth: {"TRUE" if query["results"][theory] else "FALSE"}\n')
                 print(f"Ground truth: {'TRUE' if query.groundtruth[gt] else 'FALSE'}\n")
-        else:
-            if verbose:
+            else:
                 print("Ground truth not provided.\n")
-        if verbose:
             print("====================\n")
         return evaluation_result
 
@@ -367,15 +370,17 @@ def check_causality(theory, vignette, query, gt='intuition', verbose=True):
             if evaluation_result:
                 break
 
-        if evaluation_result:
-            if verbose:
+        if verbose:
+            if evaluation_result:
                 print("Evaluation: TRUE\t", end='')
                 print(witness)
-        else:
-            if verbose:
+            else:
                 print("Evaluation: FALSE")
-        print(f"Ground truth: {'TRUE' if query.groundtruth[gt] else 'FALSE'}\n") # todo: add option if gt is not provided
-        print("====================\n")
+            if query.groundtruth[gt] in {0, 1}:
+                print(f"Ground truth: {'TRUE' if query.groundtruth[gt] else 'FALSE'}\n")
+            else:
+                print("Ground truth not provided.\n")
+            print("====================\n")
         return evaluation_result
 
 
@@ -450,7 +455,7 @@ def reproduce_paper_results(vignettes, queries, query_list=HP2005_examples, theo
     for i, query in enumerate(queries):
         if query.v_id in query_list:
             if skip and query.v_id in skip:
-                print(f"Skipping query {i} for vignette {query.v_id}\n====================\n")
+                print(f"Skipping query {i} for vignette {query.v_id}\n\n====================\n")
             else:
                 print(f"Evaluating query {i}")
                 check_causality(theory, vignettes[query.v_id], query, gt=gt)
@@ -479,10 +484,14 @@ if __name__ == "__main__":
     queries = load_queries_csv(queries_csv_path)
     # check_causality('HP2005', vignettes['ff_disj'], queries[0])
     skip = ['rock_bottle_noisy', 'rock_bottle_time']
+    # skip = []
     # evaluate_all_queries_csv(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
 
-    # reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
-    reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
+    reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
+    # todo: april rains returns TRUE, since this implementation considers any change in the effect variable as satisfying AC2a, while the paper seems to require a specific change (from 1 to 0).
+    # todo: cannot handle query monday_treatment_deadly: Cause for being alive (B=0 or B=1 or B=2)
+    # todo: is spell casting trumping different than command trumping?
+    # reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
 
 
 print()

@@ -2,15 +2,20 @@ HP2005_examples = ['ff_disj',
                    'ff_conj',
                    'april_rains',
                    'rock_bottle',
+                   'rock_bottle_time',
                    'monday_treatment',
                    'monday_treatment_omission',
                    'monday_treatment_deadly',
                    'double_prevention',
-                   'rock_bottle_time',
+                   'rock_bottle_noisy',
+                   'fred_finger',
                    'larry_loanshark',
                    'plant_watering',
                    'engineer3',
-                   'window_wall'
+                   'command_trumping'
+                   'window_wall',
+                   'voting_machine',
+                   'loader',
                    ]
 
 HP2015_examples = ['ff_disj',

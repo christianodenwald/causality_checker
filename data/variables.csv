@@ -51,7 +51,7 @@ switch3,LT,Train goes on left track,"0,1",,,not F
 switch3,RT,Train goes on right track,"0,1",,,F
 switch3,A,Train arrives,"0,1",,,LT or RT
 early_preemption_iso,A,Antidote put in coffee,"0,1",,,
-early_preemption_iso,B,Poison put in coffee,"0,1",,,A
+early_preemption_iso,B,Buddy puts poison in coffee,"0,1",,,A
 early_preemption_iso,D,Victim dies,"0,1",,,not A and B
 voting_machine,V1,Vote 1,"0,1",,,
 voting_machine,V2,Vote 2,"0,1",,,
@@ -69,7 +69,7 @@ deviant_omission,C,Plant dries up,"0,1",1,0,
 deviant_omission,E,Plant dies,"0,1",0,1,not F and C
 double_omission,B,Billy waters plant,"0,1",1,0,
 double_omission,P,Putin waters plant,"0,1",0,1,
-double_omission,D,Plant dies,"0,1",0,1,B or P
+double_omission,D,Plant dies,"0,1",0,1,not B or not P
 short_circuit,F,Boulder dislodges,"0,1",,,
 short_circuit,B,Boulder threatens to hit hiker,"0,1",,,F
 short_circuit,D,Hiker ducks at the right moment,"0,1",,,F
@@ -97,10 +97,10 @@ iso_mod_ext_dp,E,,"0,1",,,A and D
 early_preemption,T,Trainee shoots,"0,1",,,
 early_preemption,S,Supervisor shoots,"0,1",,,not T
 early_preemption,V,Victim dies,"0,1",,,T or S
-double_prevention,C,,"0,1",,,
-double_prevention,D,,"0,1",,,
-double_prevention,B,,"0,1",,,C and not D
-double_prevention,E,,"0,1",,,C and not B
+double_prevention,C,Suzy flies fighter jet,"0,1",,,
+double_prevention,D,"Billy shoots down Enemy, thereby preventing him from firing","0,1",,,
+double_prevention,B,"Enemy shoots down Suzy, thereby preventing her from dropping the bomb","0,1",,,C and not D
+double_prevention,E,Bombing takes place,"0,1",,,C and not B
 double_prevention_hall,A,Family goes to bed,"0,1",,,
 double_prevention_hall,B,Thief intends to break into house,"0,1",,,
 double_prevention_hall,C,Police patrols the vicinity of the house,"0,1",,,
@@ -149,6 +149,8 @@ rock_bottle_noisy,H2,Bottle is hit at t2,"0,1",,,BT and not BS15
 rock_bottle_noisy,BS2,Bottle is shattered at t2,"0,1",,,BS15 or H2
 rock_bottle_noisy,H3,Bottle is hit at t3,"0,1",,,T3 and not BS2
 rock_bottle_noisy,BS3,Bottle is shattered at t3,"0,1",,,BS2 or H3
+fred_finger,FS,"Fred's finger severed by machine at the factory, and rushed to hospital, and finger reattached","0,1",,,
+fred_finger,FF,Finger functional,"0,1",,,FS or not FS
 larry_loanshark,FS,"Fred's finger severed by machine at the factory, and rushed to hospital, and finger reattached","0,1",,,
 larry_loanshark,LL,Larry waits outside Fred's workplace,"0,1",,,
 larry_loanshark,LC,Larry cuts off Fred's finger,"0,1",,,LL and not FS

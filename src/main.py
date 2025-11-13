@@ -1,7 +1,4 @@
 import itertools
-import json
-import copy
-import warnings
 from typing import List
 import sys
 import os
@@ -10,20 +7,36 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import numpy as np
 import pandas as pd
 
-from HP2015 import powerset
-from HP2015 import all_splits_with_mandatory_element
-from csv_parser import *
 from data.paper_examples import *
 
-# Paths to JSON files
-vignettes_path = "../data/vignettes.json"
-queries_path = "../data/queries.json"
-vignettes_csv_path = "../data/vignettes.csv"
-variables_csv_path = "../data/variables.csv"
-queries_csv_path = "../data/queries.csv"
+# Paths to data files
+vignettes_path = "../data/vignettes.csv"
+variables_path = "../data/variables.csv"
+queries_path = "../data/queries.csv"
+
+### IMPORTED HELPER FUNCTIONS
+def all_splits_with_mandatory_element(lst, mandatory_element):
+    if mandatory_element not in lst:
+        raise ValueError("The mandatory element must be in the list.")
+
+    lst_without_mandatory = [x for x in lst if x != mandatory_element]
+    all_splits = []
+    n = len(lst_without_mandatory)
+
+    for i in range(n + 1):
+        for combo in itertools.combinations(lst_without_mandatory, i):
+            list1 = list(combo) + [mandatory_element]
+            list2 = [x for x in lst if x not in list1]
+            all_splits.append((list1, list2))
+
+    return all_splits
+
+def powerset(iterable):
+    s = list(iterable)
+    return list(itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(len(s) + 1)))
+
 
 #### CLASSES
-
 
 class Vignette:
     """
@@ -157,42 +170,143 @@ class Vignette:
     def __repr__(self):
         return f"Vignette({self.vignette_id}, {self.title}, {self.values})"
 
-#### METHODS
+class Query:
+    def __init__(self, v_id, cause, effect, intuition, HP01, HP05, HP15, H01, H07, Hall, Baumgartner13, AG24, G21):
+        self.v_id = v_id
+        self.cause = cause
+        self.effect = effect
+        self.groundtruth = {
+            'intuition': intuition,
+            'HP01': HP01,
+            'HP05': HP05,
+            'HP15': HP15,
+            'H01': H01,
+            'H07': H07,
+            'Hall': Hall,
+            'Baumgartner13': Baumgartner13,
+            'AG24': AG24,
+            'G21': G21
+        }
 
-def load_vignettes(json_path):
-    """Loads vignettes from a JSON file."""
-    with open(json_path, "r") as file:
-        data = json.load(file)
+    def __repr__(self):
+        return (f"Query(v_id={self.v_id}, cause={self.cause}, effect={self.effect}, "
+                f"groundtruth={self.groundtruth})")
+
+
+#### FUNCTIONS
+
+def load_vignettes(vignettes_csv_path, variables_csv_path):
+    """Loads vignettes from a CSV file."""
+
+    vignettes_df = pd.read_csv(vignettes_csv_path)
+    for col in ['variable_order', 'context']:
+        vignettes_df[col] = vignettes_df[col].str.split(',')
+        # Optional: strip whitespace from each item in the lists
+        vignettes_df[col] = vignettes_df[col].apply(lambda x: [item.strip() for item in x] if isinstance(x, list) else x)
+
+    variables_df = pd.read_csv(variables_csv_path)
+    variables_df['range'] = variables_df['range'].str.split(',')
+    # Optional: strip whitespace from each item in the lists
+    variables_df['range'] = variables_df['range'].apply(lambda x: [item.strip() for item in x] if isinstance(x, str) else x)
 
     vignettes = dict()
-    for vignette_data in data:
-        variables = vignette_data["variables"]
-        values = {var: details['initial_value'] for var, details in variables.items()}
-        default_values = {var: 0 for var in variables}
-        values_in_example = values.copy() #TODO
-        equations = {var: details['structural_equation'] for var, details in variables.items() if 'structural_equation' in details}
-        ranges = {var: info["range"] for var, info in variables.items()}
 
-        vignettes[vignette_data["id"]] = Vignette(
-            vignette_id=vignette_data["id"],
-            title=vignette_data["title"],
-            description=vignette_data["description"],
-            variables=variables,
-            ranges=ranges,
-            values=values,
-            default_values=default_values,
-            # values_in_example=values_in_example,
-            equations=equations,
-            context=[]
-        )
+
+    for j, vignette_data in enumerate(vignettes_df.itertuples(index=True)):
+        variable_data = variables_df.loc[variables_df.se_id == vignette_data.se_id]
+
+        variables = vignette_data.variable_order
+
+        values = {var: int(vignette_data.context[i]) if i < len(vignette_data.context) else np.nan for i, var in
+                  enumerate(variables)}
+
+        # default_values = dict()
+        # for var in variables:
+        #     # default_values[var] = variable_data.loc[variable_data['variable_name'] == var, 'default_values'].iloc[0] if any(variable_data['variable_name'] == var) else None
+        #     default_values[var] = int(variable_data.loc[variable_data['variable_name'] == var, 'default_values'].iloc[0]) if variable_data.loc[variable_data['variable_name'] == var, 'default_values'].iloc[0] else np.nan
+
+        default_values = {
+            var: (
+                int(variable_data[variable_data['variable_name'] == var]['default_values'].dropna().iloc[0])
+                if (
+                        not variable_data[variable_data['variable_name'] == var]['default_values'].isna().all()
+                        and isinstance(
+                    variable_data[variable_data['variable_name'] == var]['default_values'].dropna().iloc[0],
+                    (int, float))
+                        and variable_data[variable_data['variable_name'] == var]['default_values'].dropna().iloc[
+                            0].is_integer()
+                )
+                else np.nan
+            )
+            for var in variable_data['variable_name'].unique()
+        }
+        # default value is 0 if not given
+        default_values = {var: value if not pd.isna(value) else 0 for var, value in default_values.items()}
+
+        equations = dict()
+        for index, row in variable_data.iterrows():
+            if row['structural_equation'] is not np.nan:
+                equations[row['variable_name']] = row['structural_equation']
+
+        context = dict()
+        context_length = len(vignette_data.context)
+        context_vars = vignette_data.variable_order[:context_length]
+        for i in range(context_length):
+            context[context_vars[i]] = int(vignette_data.context[i])
+
+
+        ranges = dict()
+        for var in variables:
+            range_str = variable_data.loc[variable_data['variable_name'] == var, 'range'].iloc[0] if any(
+                variable_data['variable_name'] == var) else None
+            if range_str is not None:
+                ranges[var] = [int(x) for x in range_str]
+            else:
+                ranges[var] = None
+        # values_in_example = dict()
+
+        print(f"Vignette ID: {vignette_data.v_id}")
+        vignettes[vignette_data.v_id] = Vignette(
+                vignette_id=f'v{j}_' + vignette_data.v_id,
+                title=vignette_data.title,
+                description=vignette_data.description,
+                variables=variables,
+                context = context,
+                ranges=ranges,
+                values=values,
+                default_values=default_values,
+                equations=equations,
+                # values_in_example=values_in_example,
+            )
 
     return vignettes
 
+# Function to create Query objects from CSV file
+def load_queries(csv_path):
+    # Load the DataFrame from the CSV file
+    df = pd.read_csv(csv_path)
 
-def load_queries(query_path):
-    with open(query_path, 'r') as f:
-        return json.load(f)
-
+    query_objects = []
+    for _, row in df.iterrows():
+        # Replace NaN or empty strings with None
+        query = Query(
+            v_id=row['v_id'] if pd.notna(row['v_id']) and row['v_id'] != '' else None,
+            cause=row['cause'] if pd.notna(row['cause']) and row['cause'] != '' else None,
+            effect=row['effect'] if pd.notna(row['effect']) and row['effect'] != '' else None,
+            intuition=int(row['intuition']) if pd.notna(row['intuition']) and row['intuition'] != '' else None,
+            HP01=int(row['HP01']) if pd.notna(row['HP01']) and row['HP01'] != '' else None,
+            HP05=int(row['HP05']) if pd.notna(row['HP05']) and row['HP05'] != '' else None,
+            HP15=int(row['HP15']) if pd.notna(row['HP15']) and row['HP15'] != '' else None,
+            H01=int(row['H01']) if pd.notna(row['H01']) and row['H01'] != '' else None,
+            H07=int(row['H07']) if pd.notna(row['H07']) and row['H07'] != '' else None,
+            Hall=int(row['Hall']) if pd.notna(row['Hall']) and row['Hall'] != '' else None,
+            Baumgartner13=int(row['Baumgartner13']) if pd.notna(row['Baumgartner13']) and row[
+                'Baumgartner13'] != '' else None,
+            AG24=int(row['AG24']) if pd.notna(row['AG24']) and row['AG24'] != '' else None,
+            G21=int(row['G21']) if pd.notna(row['G21']) and row['G21'] != '' else None
+        )
+        query_objects.append(query)
+    return query_objects
 
 def check_causality(theory, vignette, query, gt='intuition', verbose=True):
 
@@ -389,43 +503,7 @@ def check_causality(theory, vignette, query, gt='intuition', verbose=True):
         raise ValueError("Invalid theory")
 
 
-def evaluate_all_queries(vignettes, queries, theory='HP2015'):
-    for query in queries:
-        check_causality(theory, vignettes[query['vignette_id']], query)
-
-def parse_gt(queries, theory='HP2005'):
-    gts = dict()
-    for query in queries:
-        gts[query['query_id']] = query['results'][theory]
-    return gts
-
-def evaluate_theory(vignettes, queries, theory='HP2005'):
-    results = dict()
-    if isinstance(queries[0], Query):
-        for query in queries:
-            results[query.query_id] = int(check_causality(theory, vignettes[query.v_id], query.to_json()))
-    else:
-        for query in queries:
-            results[query['query_id']] = int(check_causality(theory, vignettes[query['vignette_id']], query))
-
-    return results
-
-def compare_theories(queries, vignettes):
-
-    gt_HP2005 = parse_gt(queries, theory='HP2005')
-    gt_HP2015 = parse_gt(queries, theory='HP2015')
-    ev_HP2005 = evaluate_theory(vignettes, queries, theory='HP2005')
-    ev_HP2015 = evaluate_theory(vignettes, queries, theory='HP2015')
-
-    dicts = [gt_HP2005, ev_HP2005, gt_HP2015, ev_HP2015]
-
-    # Create DataFrame and transpose so keys become rows
-    df = pd.DataFrame(dicts).transpose()
-
-    # Rename columns to indicate which dictionary they came from
-    df.columns = ['HP2005-GT', 'HP2005-EV', 'HP2015-GT', 'HP2015-EV']
-
-    return df
+### EVALUATION FUNCTIONS
 
 def evaluate_theories(queries, theories: list):
     results = pd.DataFrame()
@@ -437,7 +515,7 @@ def evaluate_theories(queries, theories: list):
         pd.DataFrame.concat([query_results, results[theory]], ignore_index=True) # not sure if this is correct
     return results
 
-def evaluate_all_queries_csv(vignettes, queries, theory='HP2015', gt='intuition', skip:List=None):
+def evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip:List=None):
     results = dict()
     print("\n====================\n")
     for i, query in enumerate(queries):
@@ -461,28 +539,10 @@ def reproduce_paper_results(vignettes, queries, query_list=HP2005_examples, theo
                 check_causality(theory, vignettes[query.v_id], query, gt=gt)
 
 
-
 if __name__ == "__main__":
-    # vignettes_json = load_vignettes(vignettes_path)
-    # # vignettes = create_vignettes_with_settings(vignettes_path, settings_path)
-    # queries_json = load_queries(queries_path)
-    # check_causality('HP2005', vignettes_json['v01-ff_disj'], queries_json[0])
-
-
-
-    # check_causality('HP2005', vignettes[3], queries[3])
-
-    # evaluate_all_queries(vignettes, queries, theory='HP2015')
-    # evaluate_all_queries(vignettes, queries, theory='HP2005')
-
-    # gt = parse_gt(queries)
-
-    # comparison_df = compare_theories(queries, vignettes)
-
-    # with csv and Query class
-    vignettes = load_vignettes_csv(vignettes_csv_path, variables_csv_path)
-    queries = load_queries_csv(queries_csv_path)
-    # check_causality('HP2005', vignettes['ff_disj'], queries[0])
+    vignettes = load_vignettes(vignettes_path, variables_path)
+    queries = load_queries(queries_path)
+    # check_causality('HP2005', vignettes['ff_disj'], queries[0]) # test call for single query
     skip = ['rock_bottle_noisy', 'rock_bottle_time']
     # skip = []
     # evaluate_all_queries_csv(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)

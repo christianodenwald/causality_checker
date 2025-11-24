@@ -7,6 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import numpy as np
 import pandas as pd
 
+from dataclasses import dataclass, asdict
 from data.paper_examples import *
 
 #### PATHS TO DATA FILES
@@ -204,6 +205,19 @@ class Query:
                 f"groundtruth={self.groundtruth})")
 
 
+@dataclass
+class EvaluationResult:
+    v_id: str
+    cause: str
+    effect: str
+    theory: str
+    result: bool
+    witness: Optional[str]
+    gt_label: str
+    groundtruth: Optional[int]
+    details: Optional[str] = None
+
+
 #### FUNCTIONS
 
 def load_vignettes(vignettes_csv_path, variables_csv_path):
@@ -319,175 +333,137 @@ def load_queries(csv_path):
         query_objects.append(query)
     return query_objects
 
-def check_causality(theory, vignette, query, gt='intuition', verbose=True):
-
-    """
-        Determines whether a given query satisfies causality conditions based on a specified theory
-        in the context of a given vignette. It checks conditions using the query's cause-effect
-        relationship and evaluated results. The function can provide verbose output optionally.
-
-        Parameters:
-            theory: str
-                The causality theory to be verified (e.g., 'HP2015', 'HP2005').
-            vignette: object
-                A vignette model containing variables, equations, and their relationships.
-            query: dict
-                A JSON-like structured dictionary containing details of causality queries with cause-effect pairs and results.
-            verbose: bool, optional (default=True)
-                Flag to enable detailed printed output during the evaluation process.
-
-        Returns:
-            None
-
-        Raises:
-            ValueError
-                If cause or effect variable is not in the vignette.
-                If AC1 condition is violated for the cause or effect variable.
-                If no alternative value for the cause variable is found.
-                If an invalid theory is provided.
-
-        Notes:
-            This function currently implements logic for HP2015 theory only. HP2005 and other theories
-            are placeholders and need further implementation.
-            Requires the vignette object to have methods for resetting variable values, setting
-            exogenous values, applying custom values, and propagating these values based on equations.
-    """
-    if verbose:
-        print(f"{vignette.title} ", end='')
-
-    if isinstance(query, Query):
-        if len(query.cause.split('=')) == 2: # todo treatment for compound queries
-            cause_variable, cause_value = query.cause.split('=')
-            cause_value = int(cause_value)
-            effect_variable, effect_value = query.effect.split('=')
-            effect_value = int(effect_value)
-        else:
-            # warnings.warn('Query format not supported. Probably a compound query.')
-            print('\nWarning: Query format not supported. Probably a compound query.\n\n====================\n')
-            return
+def _format_and_print_result(res: EvaluationResult, vignette_title: Optional[str], verbose: bool):
+    if not verbose:
+        return
+    header = f"{vignette_title or res.v_id} (Theory: {res.theory})"
+    print(header)
+    print(f"Query: {res.cause} is actual cause of {res.effect}")
+    print(f"Evaluation: {'TRUE' if res.result else 'FALSE'}", end='')
+    if res.witness:
+        print(f"\t{res.witness}")
     else:
-        cause = query["query"]["cause"]
-        effect = query["query"]["effect"]
-        cause_variable, cause_value = next(iter(cause.items()))
-        effect_variable, effect_value = next(iter(effect.items()))
+        print()
+    if res.groundtruth in {0, 1}:
+        print(f"Ground truth: {'TRUE' if res.groundtruth else 'FALSE'}")
+    elif res.groundtruth is None:
+        print("Ground truth not provided.")
+    if res.details:
+        print(res.details)
+    print("====================\n")
 
-    ### Preparation
-    exogenous_vars = {var for var in vignette.variables if var not in vignette.equations}
-    endogenous_vars = set(vignette.variables) - exogenous_vars
+def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'intuition') -> EvaluationResult:
+    """
+    Compute causality according to `theory` for a single `query` in a `vignette`.
+    Returns an EvaluationResult with no printing side-effects.
+    """
+    # Extract cause/effect from Query
+    if isinstance(query, Query):
+        if len(query.cause.split('=')) != 2 or len(query.effect.split('=')) != 2:
+            return EvaluationResult(
+                v_id=query.v_id, cause=query.cause, effect=query.effect, theory=theory,
+                result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
+                details="Unsupported/compound query format."
+            )
+        cause_variable, cause_value = query.cause.split('=')
+        cause_value = int(cause_value)
+        effect_variable, effect_value = query.effect.split('=')
+        effect_value = int(effect_value)
+    else:
+        return EvaluationResult(
+            v_id=getattr(query, 'v_id', None),
+            cause=str(getattr(query, 'cause', None)),
+            effect=str(getattr(query, 'effect', None)),
+            theory=theory, result=False, witness=None, gt_label=gt,
+            groundtruth=None, details="Unsupported query object type."
+        )
 
+    # Basic checks / AC1
     if cause_variable not in vignette.variables or effect_variable not in vignette.variables:
         raise ValueError("Cause or effect variable is not in the vignette.")
 
-    ## AC1 is implied
-    if vignette.values_in_example[cause_variable] != cause_value:
-        if verbose:
-            # print(query)
-            # print(vignette)
-            print(f"(Theory: {theory})")
-            print(f"Query: {cause_variable}={cause_value} is actual cause of {effect_variable}={effect_value}")
-            # if query.query_text:
-            #     print(f"— {query.query_text}") # todo: add query text to Query class
-            if query.groundtruth[gt] in {0, 1}:
-                print(f'Evaluation: FALSE\nGround truth: {"TRUE" if query.groundtruth[gt] else "FALSE"}')
-            print(
-                f"AC1 condition violated: Actual value of cause '{cause_variable}' ({vignette.values_in_example[cause_variable]}) "
-                f"does not match expected value {cause_value}.\n\n====================\n"
-            )
-        return False
-
-    if vignette.values_in_example[effect_variable] != effect_value:
-        print(
-            f"AC1 condition violated: Actual value of effect '{effect_variable}' ({vignette.values_in_example[effect_variable]}) "
-            f"does not match expected value {effect_value}.\n"
+    if vignette.values_in_example.get(cause_variable) != cause_value:
+        return EvaluationResult(
+            v_id=query.v_id, cause=query.cause, effect=query.effect, theory=theory,
+            result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
+            details=f"AC1 violated: cause actual={vignette.values_in_example.get(cause_variable)} != {cause_value}"
         )
-        return False
 
+    if vignette.values_in_example.get(effect_variable) != effect_value:
+        return EvaluationResult(
+            v_id=query.v_id, cause=query.cause, effect=query.effect, theory=theory,
+            result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
+            details=f"AC1 violated: effect actual={vignette.values_in_example.get(effect_variable)} != {effect_value}"
+        )
+
+    # For HP2015
     if theory == 'HP2015':
-        evaluation_result = False
-        if verbose:
-            print(f"(Theory: {theory})")
-            print(f"Query: {cause_variable}={cause_value} is actual cause of {effect_variable}={effect_value}")
-
-        ### AC2am
-        # Find x' (an alternative value for the cause variable)
-        x_prime= next((val for val in vignette.ranges[cause_variable] if val != cause_value), None)
-        # x_prime = next(
-        #     (val for val in vignette.variables[cause_variable]['range'] if val != cause_value),
-        #     None
-        # )
-
+        x_prime = next((val for val in vignette.ranges[cause_variable] if val != cause_value), None)
         if x_prime is None:
             raise ValueError(f"No alternative value found for {cause_variable}.")
 
-        # Iterate over all subsets of variables excluding the cause variable
+        evaluation_result = False
+        witness_str = None
+
         for subset_w in powerset(set(vignette.variables) - {cause_variable}):
-            # Restore defaults and set initial exogenous values
             vignette.reset_values()
             vignette.set_exogenous_values()
-
-            # Set X = x' and W = w'
             vignette.set_value(cause_variable, x_prime)
             for var in subset_w:
                 vignette.set_value(var, vignette.values_in_example[var])
-            # vignette.set_value(cause_variable, x_prime)
             vignette.propagate_set_values()
 
-            # Check the effect
             if vignette.values[effect_variable] != effect_value:
                 evaluation_result = True
-                if verbose:
-                    print('Evaluation: TRUE\t', end='')
-                    print(f"Witness: W={list(subset_w)}, w={[vignette.values[var] for var in subset_w]}, x'={x_prime}")
+                witness_str = f"Witness: W={list(subset_w)}, w={[vignette.values[var] for var in subset_w]}, x'={x_prime}"
                 break
-        else:
-            if verbose:
-                print('Evaluation: FALSE')
 
-        if verbose:
-            if query.groundtruth[gt] in {0, 1}:
-                # print(f'Ground truth: {"TRUE" if query["results"][theory] else "FALSE"}\n')
-                print(f"Ground truth: {'TRUE' if query.groundtruth[gt] else 'FALSE'}\n")
-            else:
-                print("Ground truth not provided.\n")
-            print("====================\n")
-        return evaluation_result
+        return EvaluationResult(
+            v_id=query.v_id, cause=query.cause, effect=query.effect, theory=theory,
+            result=evaluation_result, witness=witness_str, gt_label=gt, groundtruth=query.groundtruth.get(gt)
+        )
 
+    # For HP2005 (keeps existing logic but returns structured result)
     elif theory == 'HP2005':
-        if verbose:
-            print(f"(Theory: {theory})")
-            print(f"Query: {cause_variable}={cause_value} is actual cause of {effect_variable}={effect_value}")
-
         evaluation_result = False
+        witness_str = None
+
         for Z, W in all_splits_with_mandatory_element(vignette.variables, cause_variable):
             for x_prime in vignette.ranges[cause_variable]:
                 if x_prime == cause_value:
                     continue
-                for w_setting in (
-                        {var: value for var, value in zip(W, w_settings)}
-                        for w_settings in itertools.product(*[vignette.ranges[var] for var in W])
-                ):
+                # iterate over all settings for W
+                for w_settings in itertools.product(*[vignette.ranges[var] for var in W]):
+                    w_setting = {var: val for var, val in zip(W, w_settings)}
                     vignette.reset_values()
                     vignette.set_exogenous_values()
                     vignette.set_value(cause_variable, x_prime)
                     for var, val in w_setting.items():
                         vignette.set_value(var, val)
                     vignette.propagate_set_values()
-                    if vignette.values[effect_variable] == effect_value:  # AC2a satisfied
+
+                    # AC2a check
+                    if vignette.values[effect_variable] == effect_value:
                         continue
+
                     ac2b_satisfied = True
-                    for subset_w, subset_z in itertools.product(powerset(W), powerset(Z)):
-                        vignette.reset_values()
-                        vignette.set_exogenous_values()
-                        for w in subset_w:
-                            vignette.set_value(w, w_setting[w])
-                        for z in subset_z:
-                            vignette.set_value(z, vignette.values_in_example[z])
-                        vignette.propagate_set_values()
-                        if vignette.values[effect_variable] != effect_value:
-                            ac2b_satisfied = False
+                    for subset_w in powerset(W):
+                        for subset_z in powerset(Z):
+                            vignette.reset_values()
+                            vignette.set_exogenous_values()
+                            for w in subset_w:
+                                vignette.set_value(w, w_setting[w])
+                            for z in subset_z:
+                                vignette.set_value(z, vignette.values_in_example[z])
+                            vignette.propagate_set_values()
+                            if vignette.values[effect_variable] != effect_value:
+                                ac2b_satisfied = False
+                                break
+                        if not ac2b_satisfied:
                             break
+
                     if ac2b_satisfied:
-                        witness = f"Witness: W={list(subset_w)}, w'={w_setting}, x'={x_prime}"
+                        witness_str = f"Witness: W={list(W)}, w'={w_setting}, x'={x_prime}"
                         evaluation_result = True
                         break
                 if evaluation_result:
@@ -495,20 +471,10 @@ def check_causality(theory, vignette, query, gt='intuition', verbose=True):
             if evaluation_result:
                 break
 
-        if verbose:
-            if evaluation_result:
-                print("Evaluation: TRUE\t", end='')
-                print(witness)
-            else:
-                print("Evaluation: FALSE")
-            if query.groundtruth[gt] in {0, 1}:
-                print(f"Ground truth: {'TRUE' if query.groundtruth[gt] else 'FALSE'}\n")
-            else:
-                print("Ground truth not provided.\n")
-            print("====================\n")
-        return evaluation_result
-
-
+        return EvaluationResult(
+            v_id=query.v_id, cause=query.cause, effect=query.effect, theory=theory,
+            result=evaluation_result, witness=witness_str, gt_label=gt, groundtruth=query.groundtruth.get(gt)
+        )
 
     else:
         raise ValueError("Invalid theory")
@@ -516,28 +482,55 @@ def check_causality(theory, vignette, query, gt='intuition', verbose=True):
 
 ### EVALUATION FUNCTIONS
 
-def evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip:List=None):
-    results = dict()
-    print("\n====================\n")
+def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], theory: str = 'HP2015',
+                         gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = True) -> pd.DataFrame:
+    """
+    Evaluate many queries, collect structured results, and optionally print per-query output.
+    Returns a DataFrame with results.
+    """
+    records: List[Dict[str, Any]] = []
+    skip = set(skip or [])
     for i, query in enumerate(queries):
-        if skip and query.v_id in skip:
-            print(f"Skipping query {i} for vignette {query.v_id}\n====================\n")
+        if query.v_id in skip:
+            if verbose:
+                print(f"Skipping query {i} for vignette {query.v_id}\n====================\n")
             continue
-        print(f"Evaluating query {i}")
-        check_causality(theory, vignettes[query.v_id], query, gt=gt)
+        if query.v_id not in vignettes:
+            if verbose:
+                print(f"Warning: vignette {query.v_id} not found. Skipping.")
+            continue
 
-def reproduce_paper_results(vignettes, queries, query_list=HP2005_examples, theory='HP2005', gt='intuition', skip:List=None):
-    results = dict()
-    if not query_list:
-        query_list = HP2005_examples
-    print("\n====================\n")
-    for i, query in enumerate(queries):
-        if query.v_id in query_list:
-            if skip and query.v_id in skip:
-                print(f"Skipping query {i} for vignette {query.v_id}\n\n====================\n")
-            else:
-                print(f"Evaluating query {i}")
-                check_causality(theory, vignettes[query.v_id], query, gt=gt)
+        res = check_causality(theory, vignettes[query.v_id], query, gt=gt)
+        _format_and_print_result(res, vignette_title=vignettes[query.v_id].title if query.v_id in vignettes else None, verbose=verbose)
+        records.append(asdict(res))
+
+    df = pd.DataFrame.from_records(records)
+
+    # New column: agreement between computed `result` (bool) and `groundtruth` (0/1).
+    if 'groundtruth' in df.columns:
+        def _agreement(row):
+            if pd.isna(row['groundtruth']):
+                return pd.NA
+            return bool(row['result']) == bool(int(row['groundtruth']))
+        df['agreement'] = df.apply(_agreement, axis=1)
+    else:
+        df['agreement'] = pd.NA
+
+    return df
+
+def reproduce_paper_results(vignettes: Dict[str, Vignette], queries: List[Query],
+                            query_list: Optional[List[str]] = None, theory: str = 'HP2005',
+                            gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = True) -> pd.DataFrame:
+    """
+    Filter `queries` to those in `query_list` (if provided) and call evaluate_all_queries.
+    Returns a DataFrame of results for the selected queries.
+    """
+    if query_list:
+        filtered = [q for q in queries if q.v_id in set(query_list)]
+    else:
+        filtered = queries
+    return evaluate_all_queries(vignettes=vignettes, queries=filtered, theory=theory, gt=gt, skip=skip, verbose=verbose)
+
 
 
 if __name__ == "__main__":
@@ -548,7 +541,7 @@ if __name__ == "__main__":
     # skip = []
     # evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
 
-    reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
+    df = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
     # todo: april rains returns TRUE, since this implementation considers any change in the effect variable as satisfying AC2a, while the paper seems to require a specific change (from 1 to 0).
     # todo: cannot handle query monday_treatment_deadly: Cause for being alive (B=0 or B=1 or B=2)
     # todo: is spell casting trumping different than command trumping?

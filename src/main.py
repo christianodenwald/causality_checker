@@ -1,5 +1,5 @@
 import itertools
-from typing import List
+from typing import List, Dict, Any, Optional
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -9,10 +9,21 @@ import pandas as pd
 
 from data.paper_examples import *
 
-# Paths to data files
-vignettes_path = "../data/vignettes.csv"
-variables_path = "../data/variables.csv"
-queries_path = "../data/queries.csv"
+#### PATHS TO DATA FILES
+from pathlib import Path
+def resolve_data_path(filename: str) -> Path:
+    """Resolve data file path relative to script dir (portable across IDEs/terminals)."""
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent  # Assumes script in src/; add .parent if deeper
+    data_path = project_root / 'data' / filename
+    if not data_path.exists():
+        raise FileNotFoundError(f"Missing data file: {data_path}")
+    return data_path
+
+# Set paths (now guaranteed to exist)
+vignettes_path = resolve_data_path('vignettes.csv')
+variables_path = resolve_data_path('variables.csv')
+queries_path = resolve_data_path('queries.csv')
 
 ### IMPORTED HELPER FUNCTIONS
 def all_splits_with_mandatory_element(lst, mandatory_element):
@@ -505,16 +516,6 @@ def check_causality(theory, vignette, query, gt='intuition', verbose=True):
 
 ### EVALUATION FUNCTIONS
 
-def evaluate_theories(queries, theories: list):
-    results = pd.DataFrame()
-
-    for query in queries:
-        query_results = dict()
-        for theory in theories:
-            pass
-        pd.DataFrame.concat([query_results, results[theory]], ignore_index=True) # not sure if this is correct
-    return results
-
 def evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip:List=None):
     results = dict()
     print("\n====================\n")
@@ -545,7 +546,7 @@ if __name__ == "__main__":
     # check_causality('HP2005', vignettes['ff_disj'], queries[0]) # test call for single query
     skip = ['rock_bottle_noisy', 'rock_bottle_time']
     # skip = []
-    # evaluate_all_queries_csv(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
+    # evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
 
     reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
     # todo: april rains returns TRUE, since this implementation considers any change in the effect variable as satisfying AC2a, while the paper seems to require a specific change (from 1 to 0).

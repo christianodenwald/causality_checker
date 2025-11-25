@@ -183,13 +183,14 @@ class Vignette:
         return f"Vignette({self.vignette_id}, {self.title}, {self.values})"
 
 class Query:
-    def __init__(self, v_id=None, cause=None, effect=None, intuition=None, HP01=None, HP05=None, HP15=None,
+    def __init__(self, v_id=None, cause=None, effect=None, effect_contrast=None, intuition=None, HP01=None, HP05=None, HP15=None,
                     H01=None, H07=None, Hall=None, Baumgartner13=None, AG24=None, G21=None, query_id: Optional[str] = None):
         # Unique identifier for the query (added to allow running single queries)
         self.query_id = query_id
         self.v_id = v_id
         self.cause = cause
         self.effect = effect
+        self.effect_contrast = int(effect_contrast) if effect_contrast is not None and pd.notna(effect_contrast) and effect_contrast != '' else None
         self.groundtruth = {
             'intuition': bool(intuition) if intuition is not None else None,
             'HP01': bool(HP01) if HP01 is not None else None,
@@ -329,6 +330,7 @@ def load_queries(csv_path):
             v_id=row['v_id'] if pd.notna(row['v_id']) and row['v_id'] != '' else None,
             cause=row['cause'] if pd.notna(row['cause']) and row['cause'] != '' else None,
             effect=row['effect'] if pd.notna(row['effect']) and row['effect'] != '' else None,
+            effect_contrast=row.get('effect_contrast') if 'effect_contrast' in row.index and pd.notna(row.get('effect_contrast')) and row.get('effect_contrast') != '' else None,
             intuition=int(row['intuition']) if pd.notna(row['intuition']) and row['intuition'] != '' else None,
             HP01=int(row['HP01']) if pd.notna(row['HP01']) and row['HP01'] != '' else None,
             HP05=int(row['HP05']) if pd.notna(row['HP05']) and row['HP05'] != '' else None,
@@ -470,7 +472,13 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
                     vignette.set_value(var, vignette.values_in_example[var])
                 vignette.propagate_set_values()
 
-                if vignette.values[effect_variable] != effect_value:
+                # Check if effect differs from effect_value
+                effect_differs = vignette.values[effect_variable] != effect_value
+                # If effect_contrast is specified, also check that the value matches it
+                if query.effect_contrast is not None:
+                    effect_differs = effect_differs and vignette.values[effect_variable] == query.effect_contrast
+                
+                if effect_differs:
                     evaluation_result = True
                     witness_str = f"Witness: W={list(subset_w)}, w={[vignette.values[var] for var in subset_w]}, x'={list(x_primes)}"
                     break
@@ -523,8 +531,13 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
                         vignette.set_value(var, val)
                     vignette.propagate_set_values()
 
-                    # AC2a check
-                    if vignette.values[effect_variable] == effect_value:
+                    # AC2a check: effect must differ from effect_value
+                    effect_differs = vignette.values[effect_variable] != effect_value
+                    # If effect_contrast is specified, also check that the value matches it
+                    if query.effect_contrast is not None:
+                        effect_differs = effect_differs and vignette.values[effect_variable] == query.effect_contrast
+                    
+                    if not effect_differs:  # simple but-for cause
                         continue
 
                     ac2b_satisfied = True

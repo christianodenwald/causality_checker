@@ -1,4 +1,4 @@
-﻿se_id,variable_name,var_description,range,default_values,deviant_values,structural_equation
+se_id,variable_name,var_description,range,default_values,deviant_values,structural_equation
 symm_od,MD,Match lit,"0,1",,,
 symm_od,L,Lightning strike,"0,1",,,
 symm_od,FF,Forest fire,"0,1",,,MD or L
@@ -61,15 +61,15 @@ two_paths,A,,"0,1",,,
 two_paths,B,,"0,1",,,A
 two_paths,C,,"0,1",,,A
 two_paths,D,,"0,1",,,B or C
-default_omission,F,The Queen waters my plant,"0,1",0,1,
-default_omission,C,Plant dries up,"0,1",1,0,
-default_omission,E,Plant dies,"0,1",0,1,not F and C
-deviant_omission,F,Neighbor waters my plant,"0,1",1,0,
-deviant_omission,C,Plant dries up,"0,1",1,0,
-deviant_omission,E,Plant dies,"0,1",0,1,not F and C
-double_omission,B,Billy waters plant,"0,1",1,0,
-double_omission,P,Putin waters plant,"0,1",0,1,
-double_omission,D,Plant dies,"0,1",0,1,not B or not P
+default_omission,F,The Queen waters my plant,"0,1",0.0,1.0,
+default_omission,C,Plant dries up,"0,1",1.0,0.0,
+default_omission,E,Plant dies,"0,1",0.0,1.0,not F and C
+deviant_omission,F,Neighbor waters my plant,"0,1",1.0,0.0,
+deviant_omission,C,Plant dries up,"0,1",1.0,0.0,
+deviant_omission,E,Plant dies,"0,1",0.0,1.0,not F and C
+double_omission,B,Billy waters plant,"0,1",1.0,0.0,
+double_omission,P,Putin waters plant,"0,1",0.0,1.0,
+double_omission,D,Plant dies,"0,1",0.0,1.0,not B or not P
 short_circuit,F,Boulder dislodges,"0,1",,,
 short_circuit,B,Boulder threatens to hit hiker,"0,1",,,F
 short_circuit,D,Hiker ducks at the right moment,"0,1",,,F

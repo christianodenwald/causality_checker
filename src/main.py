@@ -183,22 +183,26 @@ class Vignette:
         return f"Vignette({self.vignette_id}, {self.title}, {self.values})"
 
 class Query:
-    def __init__(self, v_id, cause, effect, intuition, HP01, HP05, HP15, H01, H07, Hall, Baumgartner13, AG24, G21):
+    def __init__(self, v_id=None, cause=None, effect=None, intuition=None, HP01=None, HP05=None, HP15=None,
+                    H01=None, H07=None, Hall=None, Baumgartner13=None, AG24=None, G21=None, query_id: Optional[str] = None):
+        # Unique identifier for the query (added to allow running single queries)
+        self.query_id = query_id
         self.v_id = v_id
         self.cause = cause
         self.effect = effect
         self.groundtruth = {
-            'intuition': intuition,
-            'HP01': HP01,
-            'HP05': HP05,
-            'HP15': HP15,
-            'H01': H01,
-            'H07': H07,
-            'Hall': Hall,
-            'Baumgartner13': Baumgartner13,
-            'AG24': AG24,
-            'G21': G21
+            'intuition': bool(intuition) if intuition is not None else None,
+            'HP01': bool(HP01) if HP01 is not None else None,
+            'HP05': bool(HP05) if HP05 is not None else None,
+            'HP15': bool(HP15) if HP15 is not None else None,
+            'H01': bool(H01) if H01 is not None else None,
+            'H07': bool(H07) if H07 is not None else None,
+            'Hall': bool(Hall) if Hall is not None else None,
+            'Baumgartner13': bool(Baumgartner13) if Baumgartner13 is not None else None,
+            'AG24': bool(AG24) if AG24 is not None else None,
+            'G21': bool(G21) if G21 is not None else None
         }
+
 
     def __repr__(self):
         return (f"Query(v_id={self.v_id}, cause={self.cause}, effect={self.effect}, "
@@ -208,6 +212,7 @@ class Query:
 @dataclass
 class EvaluationResult:
     v_id: str
+    query_id: Optional[str]
     cause: str
     effect: str
     theory: str
@@ -290,7 +295,7 @@ def load_vignettes(vignettes_csv_path, variables_csv_path):
                 ranges[var] = None
         # values_in_example = dict()
 
-        print(f"Vignette ID: {vignette_data.v_id}")
+        # print(f"Vignette ID: {vignette_data.v_id}")
         vignettes[vignette_data.v_id] = Vignette(
                 vignette_id=f'v{j}_' + vignette_data.v_id,
                 title=vignette_data.title,
@@ -303,7 +308,7 @@ def load_vignettes(vignettes_csv_path, variables_csv_path):
                 equations=equations,
                 # values_in_example=values_in_example,
             )
-
+    print(f"Loaded {len(vignettes)} vignettes.")
     return vignettes
 
 # Function to create Query objects from CSV file
@@ -312,8 +317,14 @@ def load_queries(csv_path):
     df = pd.read_csv(csv_path)
 
     query_objects = []
-    for _, row in df.iterrows():
+    for idx, (_, row) in enumerate(df.iterrows()):
         # Replace NaN or empty strings with None
+        # create a stable, unique query id (use existing column if present, otherwise derive one)
+        if 'query_id' in row.index and pd.notna(row.get('query_id')) and row.get('query_id') != '':
+            qid = str(row.get('query_id'))
+        else:
+            qid = f"{row['v_id']}_q{idx}"
+
         query = Query(
             v_id=row['v_id'] if pd.notna(row['v_id']) and row['v_id'] != '' else None,
             cause=row['cause'] if pd.notna(row['cause']) and row['cause'] != '' else None,
@@ -328,7 +339,8 @@ def load_queries(csv_path):
             Baumgartner13=int(row['Baumgartner13']) if pd.notna(row['Baumgartner13']) and row[
                 'Baumgartner13'] != '' else None,
             AG24=int(row['AG24']) if pd.notna(row['AG24']) and row['AG24'] != '' else None,
-            G21=int(row['G21']) if pd.notna(row['G21']) and row['G21'] != '' else None
+            G21=int(row['G21']) if pd.notna(row['G21']) and row['G21'] != '' else None,
+            query_id=qid
         )
         query_objects.append(query)
     return query_objects
@@ -339,7 +351,14 @@ def _format_and_print_result(res: EvaluationResult, vignette_title: Optional[str
     header = f"{vignette_title or res.v_id} (Theory: {res.theory})"
     print(header)
     print(f"Query: {res.cause} is actual cause of {res.effect}")
-    print(f"Evaluation: {'TRUE' if res.result else 'FALSE'}", end='')
+    # Handle three-state result: True, False, or None
+    if res.result is True:
+        eval_str = 'TRUE'
+    elif res.result is False:
+        eval_str = 'FALSE'
+    else:
+        eval_str = 'NONE'
+    print(f"Evaluation: {eval_str}", end='')
     if res.witness:
         print(f"\t{res.witness}")
     else:
@@ -358,86 +377,148 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
     Returns an EvaluationResult with no printing side-effects.
     """
     # Extract cause/effect from Query
+    qid = getattr(query, 'query_id', None)
     if isinstance(query, Query):
-        if len(query.cause.split('=')) != 2 or len(query.effect.split('=')) != 2:
+        # Parse compound causes (e.g., "MD=1 and L=1")
+        cause_parts = [part.strip() for part in query.cause.split(' and ')]
+        cause_variables = []
+        cause_values = []
+        for part in cause_parts:
+            if len(part.split('=')) != 2:
+                return EvaluationResult(
+                    v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
+                    result=None, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
+                    details=f"Invalid cause format in part: {part}"
+                )
+            var, val = part.split('=')
+            cause_variables.append(var.strip())
+            cause_values.append(int(val.strip()))
+        
+        # Parse effect (single variable for now)
+        if len(query.effect.split('=')) != 2:
             return EvaluationResult(
-                v_id=query.v_id, cause=query.cause, effect=query.effect, theory=theory,
-                result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
-                details="Unsupported/compound query format."
+                v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
+                result=None, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
+                details="Invalid effect format."
             )
-        cause_variable, cause_value = query.cause.split('=')
-        cause_value = int(cause_value)
         effect_variable, effect_value = query.effect.split('=')
         effect_value = int(effect_value)
     else:
         return EvaluationResult(
-            v_id=getattr(query, 'v_id', None),
+            v_id=getattr(query, 'v_id', None), query_id=getattr(query, 'query_id', None),
             cause=str(getattr(query, 'cause', None)),
             effect=str(getattr(query, 'effect', None)),
-            theory=theory, result=False, witness=None, gt_label=gt,
+            theory=theory, result=None, witness=None, gt_label=gt,
             groundtruth=None, details="Unsupported query object type."
         )
 
     # Basic checks / AC1
-    if cause_variable not in vignette.variables or effect_variable not in vignette.variables:
-        raise ValueError("Cause or effect variable is not in the vignette.")
+    for cause_variable in cause_variables:
+        if cause_variable not in vignette.variables:
+            raise ValueError(f"Cause variable {cause_variable} is not in the vignette.")
+    if effect_variable not in vignette.variables:
+        raise ValueError(f"Effect variable {effect_variable} is not in the vignette.")
 
-    if vignette.values_in_example.get(cause_variable) != cause_value:
-        return EvaluationResult(
-            v_id=query.v_id, cause=query.cause, effect=query.effect, theory=theory,
-            result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
-            details=f"AC1 violated: cause actual={vignette.values_in_example.get(cause_variable)} != {cause_value}"
-        )
+    # Check all cause variables match their expected values in the example
+    for cause_variable, cause_value in zip(cause_variables, cause_values):
+        if vignette.values_in_example.get(cause_variable) != cause_value:
+            return EvaluationResult(
+                v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
+                result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
+                details=f"AC1 violated: cause {cause_variable} actual={vignette.values_in_example.get(cause_variable)} != {cause_value}"
+            )
 
     if vignette.values_in_example.get(effect_variable) != effect_value:
         return EvaluationResult(
-            v_id=query.v_id, cause=query.cause, effect=query.effect, theory=theory,
+            v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
             result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
             details=f"AC1 violated: effect actual={vignette.values_in_example.get(effect_variable)} != {effect_value}"
         )
 
     # For HP2015
     if theory == 'HP2015':
-        x_prime = next((val for val in vignette.ranges[cause_variable] if val != cause_value), None)
-        if x_prime is None:
-            raise ValueError(f"No alternative value found for {cause_variable}.")
+        # Get all alternative values for all cause variables
+        cause_alternatives = []
+        for cause_variable, cause_value in zip(cause_variables, cause_values):
+            alternatives = [val for val in vignette.ranges[cause_variable] if val != cause_value]
+            if not alternatives:
+                return EvaluationResult(
+                    v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
+                    result=None, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
+                    details=f"No alternative value found for {cause_variable}."
+                )
+            cause_alternatives.append(alternatives)
 
         evaluation_result = False
         witness_str = None
 
-        for subset_w in powerset(set(vignette.variables) - {cause_variable}):
-            vignette.reset_values()
-            vignette.set_exogenous_values()
-            vignette.set_value(cause_variable, x_prime)
-            for var in subset_w:
-                vignette.set_value(var, vignette.values_in_example[var])
-            vignette.propagate_set_values()
+        # Iterate over all combinations of alternative values for the causes
+        for x_primes in itertools.product(*cause_alternatives):
+            # Variables that are not in the cause set
+            non_cause_vars = set(vignette.variables) - set(cause_variables)
+            
+            for subset_w in powerset(non_cause_vars):
+                vignette.reset_values()
+                vignette.set_exogenous_values()
+                
+                # Set all cause variables to their alternative values
+                for cause_variable, x_prime in zip(cause_variables, x_primes):
+                    vignette.set_value(cause_variable, x_prime)
+                
+                # Set witness variables to their example values
+                for var in subset_w:
+                    vignette.set_value(var, vignette.values_in_example[var])
+                vignette.propagate_set_values()
 
-            if vignette.values[effect_variable] != effect_value:
-                evaluation_result = True
-                witness_str = f"Witness: W={list(subset_w)}, w={[vignette.values[var] for var in subset_w]}, x'={x_prime}"
+                if vignette.values[effect_variable] != effect_value:
+                    evaluation_result = True
+                    witness_str = f"Witness: W={list(subset_w)}, w={[vignette.values[var] for var in subset_w]}, x'={list(x_primes)}"
+                    break
+            
+            if evaluation_result:
                 break
 
         return EvaluationResult(
-            v_id=query.v_id, cause=query.cause, effect=query.effect, theory=theory,
+            v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
             result=evaluation_result, witness=witness_str, gt_label=gt, groundtruth=query.groundtruth.get(gt)
         )
 
-    # For HP2005 (keeps existing logic but returns structured result)
+    # For HP2005
     elif theory == 'HP2005':
         evaluation_result = False
         witness_str = None
 
-        for Z, W in all_splits_with_mandatory_element(vignette.variables, cause_variable):
-            for x_prime in vignette.ranges[cause_variable]:
-                if x_prime == cause_value:
-                    continue
+        # For multiple causes, we need to handle them as a set
+        # The cause variables form a mandatory set that must be in Z
+        cause_set = set(cause_variables)
+        non_cause_vars = [v for v in vignette.variables if v not in cause_set]
+        
+        # Generate all possible splits where all cause variables are in Z
+        for W_subset in powerset(non_cause_vars):
+            W = list(W_subset)
+            Z = [v for v in vignette.variables if v not in W]
+            
+            # Verify all cause variables are in Z
+            if not cause_set.issubset(set(Z)):
+                continue
+            
+            # Generate alternative value combinations for all cause variables
+            cause_alternatives = []
+            for cause_variable, cause_value in zip(cause_variables, cause_values):
+                alternatives = [val for val in vignette.ranges[cause_variable] if val != cause_value]
+                cause_alternatives.append(alternatives)
+            
+            for x_primes in itertools.product(*cause_alternatives):
                 # iterate over all settings for W
                 for w_settings in itertools.product(*[vignette.ranges[var] for var in W]):
                     w_setting = {var: val for var, val in zip(W, w_settings)}
                     vignette.reset_values()
                     vignette.set_exogenous_values()
-                    vignette.set_value(cause_variable, x_prime)
+                    
+                    # Set all cause variables to their alternative values
+                    for cause_variable, x_prime in zip(cause_variables, x_primes):
+                        vignette.set_value(cause_variable, x_prime)
+                    
                     for var, val in w_setting.items():
                         vignette.set_value(var, val)
                     vignette.propagate_set_values()
@@ -463,7 +544,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
                             break
 
                     if ac2b_satisfied:
-                        witness_str = f"Witness: W={list(W)}, w'={w_setting}, x'={x_prime}"
+                        witness_str = f"Witness: W={list(W)}, w'={w_setting}, x'={list(x_primes)}"
                         evaluation_result = True
                         break
                 if evaluation_result:
@@ -472,18 +553,23 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
                 break
 
         return EvaluationResult(
-            v_id=query.v_id, cause=query.cause, effect=query.effect, theory=theory,
+            v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
             result=evaluation_result, witness=witness_str, gt_label=gt, groundtruth=query.groundtruth.get(gt)
         )
 
     else:
-        raise ValueError("Invalid theory")
+        return EvaluationResult(
+            v_id=getattr(query, 'v_id', None), query_id=qid, cause=getattr(query, 'cause', None),
+            effect=getattr(query, 'effect', None), theory=theory, result=None, witness=None, gt_label=gt,
+            groundtruth=getattr(query, 'groundtruth', {}).get(gt) if isinstance(query, Query) else None,
+            details=f"Invalid/unsupported theory: {theory}"
+        )
 
 
 ### EVALUATION FUNCTIONS
 
 def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], theory: str = 'HP2015',
-                         gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = True) -> pd.DataFrame:
+                         gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = False) -> pd.DataFrame:
     """
     Evaluate many queries, collect structured results, and optionally print per-query output.
     Returns a DataFrame with results.
@@ -509,7 +595,7 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], t
     # New column: agreement between computed `result` (bool) and `groundtruth` (0/1).
     if 'groundtruth' in df.columns:
         def _agreement(row):
-            if pd.isna(row['groundtruth']):
+            if pd.isna(row['groundtruth']) or pd.isna(row.get('result')):
                 return pd.NA
             return bool(row['result']) == bool(int(row['groundtruth']))
         df['agreement'] = df.apply(_agreement, axis=1)
@@ -520,7 +606,7 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], t
 
 def reproduce_paper_results(vignettes: Dict[str, Vignette], queries: List[Query],
                             query_list: Optional[List[str]] = None, theory: str = 'HP2005',
-                            gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = True) -> pd.DataFrame:
+                            gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = False) -> pd.DataFrame:
     """
     Filter `queries` to those in `query_list` (if provided) and call evaluate_all_queries.
     Returns a DataFrame of results for the selected queries.
@@ -532,6 +618,31 @@ def reproduce_paper_results(vignettes: Dict[str, Vignette], queries: List[Query]
     return evaluate_all_queries(vignettes=vignettes, queries=filtered, theory=theory, gt=gt, skip=skip, verbose=verbose)
 
 
+def get_query_by_id(queries: List[Query], query_id: str) -> Optional[Query]:
+    """Return the Query object with matching `query_id`, or None if not found."""
+    for q in queries:
+        if getattr(q, 'query_id', None) == query_id:
+            return q
+    return None
+
+
+def run_single_query(vignettes: Dict[str, Vignette], queries: List[Query], query_id: str,
+                     theory: str = 'HP2015', gt: str = 'intuition', verbose: bool = True) -> EvaluationResult:
+    """Run `check_causality` for a single query identified by `query_id` and return the EvaluationResult.
+
+    Raises a ValueError if the query or vignette cannot be found.
+    """
+    q = get_query_by_id(queries, query_id)
+    if q is None:
+        raise ValueError(f"Query with id {query_id} not found")
+    if q.v_id not in vignettes:
+        raise ValueError(f"Vignette {q.v_id} for query {query_id} not found")
+
+    res = check_causality(theory, vignettes[q.v_id], q, gt=gt)
+    _format_and_print_result(res, vignette_title=vignettes[q.v_id].title if q.v_id in vignettes else None, verbose=verbose)
+    return res
+
+
 
 if __name__ == "__main__":
     vignettes = load_vignettes(vignettes_path, variables_path)
@@ -541,11 +652,14 @@ if __name__ == "__main__":
     # skip = []
     # evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
 
-    df = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
+    df_paper_HP2005 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
     # todo: april rains returns TRUE, since this implementation considers any change in the effect variable as satisfying AC2a, while the paper seems to require a specific change (from 1 to 0).
     # todo: cannot handle query monday_treatment_deadly: Cause for being alive (B=0 or B=1 or B=2)
     # todo: is spell casting trumping different than command trumping?
-    # reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
 
+    df_paper_HP2015 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
+
+    # fixing compound queries
+    result = run_single_query(vignettes, queries, query_id='ff_disj_q2', theory='HP2015', gt='HP15')
 
 print()

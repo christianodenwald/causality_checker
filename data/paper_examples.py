@@ -23,6 +23,7 @@ HP2015_examples = ['ff_disj',
                    'rock_bottle',
                    'loader',
                    'bogus_prevention',
+                   'non_existent_threat'
                    'combination_lamp',
                    'fancy_lamp',
                    'ff_mechanisms',

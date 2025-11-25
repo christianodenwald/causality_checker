@@ -1,4 +1,4 @@
-﻿v_id,se_id,other_names,vignette_text,variable_order,context,title,description,origin,taken_from,equivalent_to,other_models,similar,notes
+v_id,se_id,other_names,vignette_text,variable_order,context,title,description,origin,taken_from,equivalent_to,other_models,similar,notes
 ff_disj,symm_od,,The forest burns down if either a match is dropped or lightning strikes. A match is dropped and lightning strikes.,"MD,L,FF","1,1",Forest Fire disjunctive,,,"Halpern 2015, Ex. 3.1",assassin_badgirl,,Bullseye (Glymour 1),
 ff_conj,conj,,The forest burns down if a match is dropped and lightning strikes. A match is dropped and lightning strikes.,"MD,L,FF","1,1",Forest Fire conjunctive,,,"Halpern 2015, Ex. 3.1",,,Bullets collide (Glymour 3),
 rock_bottle,late_preemption,,"Suzy throws a rock at a bottle. Billy throws slightly after, but before Suzy's rock hits. Suzy's rock hits the bottle and shatters it. Billy's rock would have hit if Suzy's had not.","ST,BT,SH,BH,BS","1,1",Rock throwing,,,"Halpern 2015, Ex. 3.2",,rock_bottle_time,Fast bullet (Glymour 2),

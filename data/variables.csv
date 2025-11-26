@@ -32,7 +32,7 @@ campfire_vote,R,Ranger vote,"0,1",,,
 campfire_vote,W,Wrangler vote,"0,1",,,
 campfire_vote,H1,Hand 1 vote,"0,1",,,
 campfire_vote,H2,Hand 2 vote,"0,1",,,
-campfire_vote,O,Outcome,"0,1",,,(((not C or R) and (C or not R)) or ((not C and R and W and H1 and H2) or (C and not R and not W and not H1 and not H2))) and C or (((C and not R) or (not C and R)) and not ((not C and R and W and H1 and H2) or (C and not R and not W and not H1 and not H2)) and ((C + R + W + H1 + H2) >= 3))
+campfire_vote,O,Outcome,"0,1",,,(C and R) or (H1 and H2 and R) or (H1 and R and W) or (H2 and R and W) or (C and H1 and H2 and not W) or (C and H1 and W and not H2) or (C and H2 and W and not H1) or (R and not H1 and not H2 and not W)
 voting,A,A shoots,"0,1",,,
 voting,B,B shoots,"0,1",,,
 voting,C,C shoots,"0,1",,,

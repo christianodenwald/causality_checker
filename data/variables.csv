@@ -120,9 +120,12 @@ counterexample_transitivity,A,Assassin puts poison in coffee,"0,1",,,
 counterexample_transitivity,B,Bodyguard puts antidote in coffee,"0,1",,,A
 counterexample_transitivity,D,Victim dies,"0,1",,,A and not B
 april_rains,A,April showers,"0,1",,,
-april_rains,M,Thunderstroms in May,"0,1",,,
-april_rains,J,Thunderstroms in June,"0,1",,,
-april_rains,F,"Fire (none, in May, in June)","0,1,2",,,2*(A and (M or J)) + 2*(not A and not M and J) + (not A and M)
+april_rains,T,"Thunderstroms in: 0 - not, 1 - only May, 2 - only June, 3 - May and June","0,1,2,3",,,
+april_rains,F,"Fire (none, in May, in June)","0,1,2",,,2*((A and T>=2) or (not A and T==2)) + (not A and (T==1 or T==3)) 
+april_rains2,A,April showers,"0,1",,,
+april_rains2,M,Thunderstroms in May,"0,1",,,
+april_rains2,J,Thunderstroms in June,"0,1",,,
+april_rains2,F,"Fire (none, in May, in June)","0,1,2",,,2*(A and J) + 2*(not A and not M and J) + (not A and M)
 rock_bottle_time,ST,Suzy throws,"0,1",,,
 rock_bottle_time,BT,Billy throws,"0,1",,,
 rock_bottle_time,T3,Person throws at t3,"0,1",,,

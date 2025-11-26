@@ -216,6 +216,7 @@ class EvaluationResult:
     query_id: Optional[str]
     cause: str
     effect: str
+    effect_contrast: Optional[int]
     theory: str
     result: bool
     witness: Optional[str]
@@ -388,7 +389,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
         for part in cause_parts:
             if len(part.split('=')) != 2:
                 return EvaluationResult(
-                    v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
+                    v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
                     result=None, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
                     details=f"Invalid cause format in part: {part}"
                 )
@@ -399,7 +400,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
         # Parse effect (single variable for now)
         if len(query.effect.split('=')) != 2:
             return EvaluationResult(
-                v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
+                v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
                 result=None, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
                 details="Invalid effect format."
             )
@@ -410,6 +411,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             v_id=getattr(query, 'v_id', None), query_id=getattr(query, 'query_id', None),
             cause=str(getattr(query, 'cause', None)),
             effect=str(getattr(query, 'effect', None)),
+            effect_contrast=getattr(query, 'effect_contrast', None),
             theory=theory, result=None, witness=None, gt_label=gt,
             groundtruth=None, details="Unsupported query object type."
         )
@@ -425,14 +427,14 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
     for cause_variable, cause_value in zip(cause_variables, cause_values):
         if vignette.values_in_example.get(cause_variable) != cause_value:
             return EvaluationResult(
-                v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
+                v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
                 result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
                 details=f"AC1 violated: cause {cause_variable} actual={vignette.values_in_example.get(cause_variable)} != {cause_value}"
             )
 
     if vignette.values_in_example.get(effect_variable) != effect_value:
         return EvaluationResult(
-            v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
+            v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
             result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
             details=f"AC1 violated: effect actual={vignette.values_in_example.get(effect_variable)} != {effect_value}"
         )
@@ -445,7 +447,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             alternatives = [val for val in vignette.ranges[cause_variable] if val != cause_value]
             if not alternatives:
                 return EvaluationResult(
-                    v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
+                    v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
                     result=None, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
                     details=f"No alternative value found for {cause_variable}."
                 )
@@ -565,7 +567,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             v_id=getattr(query, 'v_id', None), query_id=qid, cause=getattr(query, 'cause', None),
             effect=getattr(query, 'effect', None), theory=theory, result=None, witness=None, gt_label=gt,
             groundtruth=getattr(query, 'groundtruth', {}).get(gt) if isinstance(query, Query) else None,
-            details=f"Invalid/unsupported theory: {theory}"
+            effect_contrast=getattr(query, 'effect_contrast', None), details=f"Invalid/unsupported theory: {theory}"
         )
 
     # AC3: Check minimality - no proper subset of cause variables is itself a cause
@@ -592,13 +594,13 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
                 if subset_result.result:
                     # A proper subset is also a cause, so AC3 is violated
                     return EvaluationResult(
-                        v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
+                        v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
                         result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
                         details=f"AC3 violated: proper subset {subset_cause_str} is also a cause"
                     )
 
     return EvaluationResult(
-        v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
+        v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
         result=evaluation_result, witness=witness_str, gt_label=gt, groundtruth=query.groundtruth.get(gt)
     )
 
@@ -628,6 +630,10 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], t
         records.append(asdict(res))
 
     df = pd.DataFrame.from_records(records)
+
+    # Ensure `effect_contrast` is integer dtype with NA support if present
+    if 'effect_contrast' in df.columns:
+        df['effect_contrast'] = pd.to_numeric(df['effect_contrast'], errors='coerce').astype('Int64')
 
     # New column: agreement between computed `result` (bool) and `groundtruth` (0/1).
     if 'groundtruth' in df.columns:
@@ -689,12 +695,12 @@ if __name__ == "__main__":
     # skip = []
     # evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
 
-    # df_paper_HP2005 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
+    df_paper_HP2005 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
     # todo: april rains returns TRUE, since this implementation considers any change in the effect variable as satisfying AC2a, while the paper seems to require a specific change (from 1 to 0).
     # todo: cannot handle query monday_treatment_deadly: Cause for being alive (B=0 or B=1 or B=2)
     # todo: is spell casting trumping different than command trumping?
 
-    df_paper_HP2015 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
+    # df_paper_HP2015 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
 
     # fixing compound queries
     result = run_single_query(vignettes, queries, query_id='engineer1_q40', theory='HP2015', gt='HP15')

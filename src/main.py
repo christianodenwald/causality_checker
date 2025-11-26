@@ -486,11 +486,6 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             if evaluation_result:
                 break
 
-        return EvaluationResult(
-            v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
-            result=evaluation_result, witness=witness_str, gt_label=gt, groundtruth=query.groundtruth.get(gt)
-        )
-
     # For HP2005
     elif theory == 'HP2005':
         evaluation_result = False
@@ -565,11 +560,6 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             if evaluation_result:
                 break
 
-        return EvaluationResult(
-            v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
-            result=evaluation_result, witness=witness_str, gt_label=gt, groundtruth=query.groundtruth.get(gt)
-        )
-
     else:
         return EvaluationResult(
             v_id=getattr(query, 'v_id', None), query_id=qid, cause=getattr(query, 'cause', None),
@@ -577,6 +567,40 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             groundtruth=getattr(query, 'groundtruth', {}).get(gt) if isinstance(query, Query) else None,
             details=f"Invalid/unsupported theory: {theory}"
         )
+
+    # AC3: Check minimality - no proper subset of cause variables is itself a cause
+    # This applies to both HP2015 and HP2005
+    if evaluation_result and len(cause_variables) > 1:
+        # Check all proper subsets
+        for r in range(1, len(cause_variables)):
+            for subset_indices in itertools.combinations(range(len(cause_variables)), r):
+                subset_vars = [cause_variables[i] for i in subset_indices]
+                subset_vals = [cause_values[i] for i in subset_indices]
+                
+                # Create a Query object for this subset
+                subset_cause_str = ' and '.join([f"{var}={val}" for var, val in zip(subset_vars, subset_vals)])
+                subset_query = Query(
+                    v_id=query.v_id,
+                    cause=subset_cause_str,
+                    effect=query.effect,
+                    effect_contrast=query.effect_contrast,
+                    query_id=f"{qid}_subset"
+                )
+                
+                # Recursively check if this subset is a cause
+                subset_result = check_causality(theory, vignette, subset_query, gt=gt)
+                if subset_result.result:
+                    # A proper subset is also a cause, so AC3 is violated
+                    return EvaluationResult(
+                        v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
+                        result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
+                        details=f"AC3 violated: proper subset {subset_cause_str} is also a cause"
+                    )
+
+    return EvaluationResult(
+        v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, theory=theory,
+        result=evaluation_result, witness=witness_str, gt_label=gt, groundtruth=query.groundtruth.get(gt)
+    )
 
 
 ### EVALUATION FUNCTIONS
@@ -665,7 +689,7 @@ if __name__ == "__main__":
     # skip = []
     # evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
 
-    df_paper_HP2005 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
+    # df_paper_HP2005 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
     # todo: april rains returns TRUE, since this implementation considers any change in the effect variable as satisfying AC2a, while the paper seems to require a specific change (from 1 to 0).
     # todo: cannot handle query monday_treatment_deadly: Cause for being alive (B=0 or B=1 or B=2)
     # todo: is spell casting trumping different than command trumping?
@@ -673,6 +697,6 @@ if __name__ == "__main__":
     df_paper_HP2015 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
 
     # fixing compound queries
-    result = run_single_query(vignettes, queries, query_id='ff_disj_q2', theory='HP2015', gt='HP15')
+    result = run_single_query(vignettes, queries, query_id='engineer1_q40', theory='HP2015', gt='HP15')
 
 print()

@@ -700,7 +700,7 @@ if __name__ == "__main__":
     # todo: cannot handle query monday_treatment_deadly: Cause for being alive (B=0 or B=1 or B=2)
     # todo: is spell casting trumping different than command trumping?
 
-    # df_paper_HP2015 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
+    df_paper_HP2015 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
 
     # fixing compound queries
     result = run_single_query(vignettes, queries, query_id='engineer1_q40', theory='HP2015', gt='HP15')

@@ -198,3 +198,15 @@ two_loaders,H,Bullseye hit,"0,1",,,(A and La) or (B and Lb)
 inevitable_prevention,B,Birth control pills,"0,1",,,
 inevitable_prevention,P,Pregnancy,"0,1",,,not B
 inevitable_prevention,T,Thrombosis,"0,1",,,B or P
+pollutant50,A,Company A dumps pollutant,"0,100",,,
+pollutant50,B,Company B dumps pollutant,"0,60",,,
+pollutant50,D,fish die,"0, 1",,,(A + B) >= 50
+pollutant80,A,Company A dumps pollutant,"0,100",,,
+pollutant80,B,Company B dumps pollutant,"0,60",,,
+pollutant80,D,fish die,"0, 1",,,(A + B) >= 80
+pollutant120,A,Company A dumps pollutant,"0,100",,,
+pollutant120,B,Company B dumps pollutant,"0,60",,,
+pollutant120,D,fish die,"0, 1",,,(A + B) >= 120
+pollutant80_continuous,A,Company A dumps pollutant,"0,10, 20, 30, 40, 50, 60, 70, 80, 90, 100",,,
+pollutant80_continuous,B,Company B dumps pollutant,"0,60",,,
+pollutant80_continuous,D,fish die,"0, 1",,,(A + B) >= 80

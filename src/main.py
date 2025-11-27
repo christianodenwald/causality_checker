@@ -183,7 +183,7 @@ class Vignette:
         return f"Vignette({self.vignette_id}, {self.title}, {self.values})"
 
 class Query:
-    def __init__(self, v_id=None, cause=None, effect=None, effect_contrast=None, intuition=None, HP01=None, HP05=None, HP15=None,
+    def __init__(self, v_id=None, cause=None, effect=None, effect_contrast=None, query_text=None, intuition=None, HP01=None, HP05=None, HP15=None,
                     H01=None, H07=None, Hall=None, Baumgartner13=None, AG24=None, G21=None, query_id: Optional[str] = None):
         # Unique identifier for the query (added to allow running single queries)
         self.query_id = query_id
@@ -191,6 +191,7 @@ class Query:
         self.cause = cause
         self.effect = effect
         self.effect_contrast = int(effect_contrast) if effect_contrast is not None and pd.notna(effect_contrast) and effect_contrast != '' else None
+        self.query_text = query_text if pd.notna(query_text) and query_text != '' else None
         self.groundtruth = {
             'intuition': bool(intuition) if intuition is not None else None,
             'HP01': bool(HP01) if HP01 is not None else None,
@@ -332,6 +333,7 @@ def load_queries(csv_path):
             cause=row['cause'] if pd.notna(row['cause']) and row['cause'] != '' else None,
             effect=row['effect'] if pd.notna(row['effect']) and row['effect'] != '' else None,
             effect_contrast=row.get('effect_contrast') if 'effect_contrast' in row.index and pd.notna(row.get('effect_contrast')) and row.get('effect_contrast') != '' else None,
+            query_text=row.get('query_text') if 'query_text' in row.index and pd.notna(row.get('query_text')) and row.get('query_text') != '' else None,
             intuition=int(row['intuition']) if pd.notna(row['intuition']) and row['intuition'] != '' else None,
             HP01=int(row['HP01']) if pd.notna(row['HP01']) and row['HP01'] != '' else None,
             HP05=int(row['HP05']) if pd.notna(row['HP05']) and row['HP05'] != '' else None,

@@ -376,7 +376,20 @@ def _format_and_print_result(res: EvaluationResult, vignette_title: Optional[str
         print(res.details)
     print("====================\n")
 
-def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'intuition') -> EvaluationResult:
+def setting_is_at_least_as_normal(vignette, w_setting):
+    """Check if the setting w_setting is at least as normal as the vignette's context."""
+    # TODO: Redo typicality ordering for each variable in variables.csv instead of just one default value
+    for var, val in vignette.context.items():
+        pass
+    for var, val in w_setting.items():
+        if var in vignette.context:
+            if vignette.context[var] == vignette.default_values[var]:
+                if val != vignette.default_values[var]:
+                    return False
+    return True                
+                
+
+def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'intuition', normality: bool = True) -> EvaluationResult:
     """
     Compute causality according to `theory` for a single `query` in a `vignette`.
     Returns an EvaluationResult with no printing side-effects.
@@ -459,7 +472,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
         witness_str = None
 
         # Iterate over all combinations of alternative values for the causes
-        for x_primes in itertools.product(*cause_alternatives):
+        for x_primes in itertools.product(*cause_alternatives): #TODO: move contrastive effect handling here
             # Variables that are not in the cause set
             non_cause_vars = set(vignette.variables) - set(cause_variables)
             
@@ -529,6 +542,12 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
                     for var, val in w_setting.items():
                         vignette.set_value(var, val)
                     vignette.propagate_set_values()
+                    
+                    # TODO: should be under HP2015, not here
+                    # normality_condition = None # TODO: record in EvaluationResult if normality kicked in 
+                    # if normality:
+                    #     if setting_is_at_least_as_normal(vignette, w_setting) is False:
+                    #         continue
 
                     # AC2a check: effect must differ from effect_value
                     effect_differs = vignette.values[effect_variable] != effect_value

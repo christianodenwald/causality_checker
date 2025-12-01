@@ -18,6 +18,4 @@ for query in queries:
         response
     results[query.query_id] = response_bool
 
-
-result = ollama.generate(model='llama3.2', prompt="prompt")
-print(result['response'])
+print()

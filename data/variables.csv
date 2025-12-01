@@ -101,11 +101,24 @@ double_prevention,C,Suzy flies fighter jet,"0,1",,,
 double_prevention,D,"Billy shoots down Enemy, thereby preventing him from firing","0,1",,,
 double_prevention,B,"Enemy shoots down Suzy, thereby preventing her from dropping the bomb","0,1",,,C and not D
 double_prevention,E,Bombing takes place,"0,1",,,C and not B
+double_prevention_pearl,BPT,Billy pulls trigger,"0,1",,,
+double_prevention_pearl,LE,Enemy eludes Billy,"0,1",,,not BPT
+double_prevention_pearl,LSS,Enemy shoots Suzy,"0,1",,,LE
+double_prevention_pearl,SPS,Suzy plans to shoot the target,"0,1",,,
+double_prevention_pearl,SST,Suzy shoots target,"0,1",,,SPS and not LSS
+double_prevention_pearl,TD,Target destroyed,"0,1",,,SST
+double_prevention_pearl_backup,BPT,Billy pulls trigger,"0,1",,,
+double_prevention_pearl_backup,LE,Enemy eludes Billy,"0,1",,,not BPT
+double_prevention_pearl_backup,HPT,Hillary pulls trigger,"0,1",,,LE
+double_prevention_pearl_backup,LSS,Enemy shoots Suzy,"0,1",,,LE and not HPT
+double_prevention_pearl_backup,SPS,Suzy plans to shoot the target,"0,1",,,
+double_prevention_pearl_backup,SST,Suzy shoots target,"0,1",,,SPS and not LSS
+double_prevention_pearl_backup,TD,Target destroyed,"0,1",,,SST
 double_prevention_hall,A,Family goes to bed,"0,1",,,
-double_prevention_hall,B,Thief intends to break into house,"0,1",,,
-double_prevention_hall,C,Police patrols the vicinity of the house,"0,1",,,
-double_prevention_hall,D,Police catches thief before entering the house,"0,1",,,B and not C
-double_prevention_hall,E,Family sleeps peacefully through the night,"0,1",,,A and not D
+double_prevention_hall,B,Thief intends to break into the house,"0,1",,,
+double_prevention_hall,C,Police catches any thieves,"0,1",,,
+double_prevention_hall,D,Thief enters the house,"0,1",,,B and not C
+double_prevention_hall,E,The family sleeps peacefully through the night,"0,1",,,A and not D
 backup_threat_canceling,A,,"0,1",,,
 backup_threat_canceling,B,,"0,1",,,
 backup_threat_canceling,C,,"0,1",,,

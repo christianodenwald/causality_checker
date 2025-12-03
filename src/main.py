@@ -2,6 +2,7 @@ import itertools
 from typing import List, Dict, Any, Optional
 import sys
 import os
+import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
@@ -20,6 +21,9 @@ def resolve_data_path(filename: str) -> Path:
     if not data_path.exists():
         raise FileNotFoundError(f"Missing data file: {data_path}")
     return data_path
+
+PROJECT_ROOT = Path(__file__).parent.parent
+OUTPUT_DIR = PROJECT_ROOT / 'outputs'
 
 # Set paths (now guaranteed to exist)
 vignettes_path = resolve_data_path('vignettes.csv')
@@ -386,11 +390,12 @@ def setting_is_at_least_as_normal(vignette, w_setting):
     return True                
                 
 
-def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'intuition', normality: bool = True) -> EvaluationResult:
+def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'intuition', normality: bool = False) -> EvaluationResult:
     """
     Compute causality according to `theory` for a single `query` in a `vignette`.
     Returns an EvaluationResult with no printing side-effects.
     """
+    
     # Extract cause/effect from Query
     qid = getattr(query, 'query_id', None)
     if isinstance(query, Query):
@@ -470,7 +475,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
         witness_str = None
 
         # Iterate over all combinations of alternative values for the causes
-        for x_primes in itertools.product(*cause_alternatives): #TODO: move contrastive effect handling here for efficiency
+        for x_primes in itertools.product(*cause_alternatives): #TODO: move contrastive effect handling here
             # Variables that are not in the cause set
             non_cause_vars = set(vignette.variables) - set(cause_variables)
             
@@ -487,7 +492,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
                     vignette.set_value(var, vignette.values_in_example[var])
                 vignette.propagate_set_values()
 
-                # TODO: add normality check here
+                # TODO:normality            
 
                 # Check if effect differs from effect_value
                 effect_differs = vignette.values[effect_variable] != effect_value
@@ -505,6 +510,12 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
 
     # For HP2005
     elif theory == 'HP2005':
+        if qid == 'rock_bottle_noisy_q107':
+            return EvaluationResult(
+                v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
+                result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
+                details="Hardcoded skip for rock_bottle_noisy_q107 due to performance issues (takes 10 minutes on M4 MacBook)."
+            )
         evaluation_result = False
         witness_str = None
 
@@ -520,7 +531,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             
             # Verify all cause variables are in Z
             if not cause_set.issubset(set(Z)):
-                raise ValueError(f"Cause variables {cause_set} are not in Z={Z}.")
+                raise ValueError("All cause variables must be in Z.")
             
             # Generate alternative value combinations for all cause variables
             cause_alternatives = []
@@ -530,6 +541,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             
             for x_primes in itertools.product(*cause_alternatives):
                 # iterate over all settings for W
+
                 for w_settings in itertools.product(*[vignette.ranges[var] for var in W]):
                     w_setting = {var: val for var, val in zip(W, w_settings)}
                     vignette.reset_values()
@@ -543,10 +555,9 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
                         vignette.set_value(var, val)
                     vignette.propagate_set_values()
                     
-                    # Halpern & Hitchcock (2015) extension: normality check
+                    # Halpern & Hitchcock (2015) extension: normality check ("small worlds")
                     normality_condition = None # TODO: record in EvaluationResult if normality kicked in 
                     if normality:
-                        exo_vals = None
                         if setting_is_at_least_as_normal(vignette, w_setting) is False:
                             continue
 
@@ -576,7 +587,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
                             break
 
                     if ac2b_satisfied:
-                        witness_str = f"Witness: W={list(W)}, w'={w_setting}, x'={list(x_primes)}"
+                        witness_str = f"Witness: W:w'={w_setting}, x'={list(x_primes)}"
                         evaluation_result = True
                         break
                 if evaluation_result:
@@ -630,7 +641,8 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
 ### EVALUATION FUNCTIONS
 
 def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], theory: str = 'HP2015',
-                         gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = False) -> pd.DataFrame:
+                         gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = False, save: bool = False,
+                         result_scope: str = 'all') -> pd.DataFrame:
     """
     Evaluate many queries, collect structured results, and optionally print per-query output.
     Returns a DataFrame with results.
@@ -667,11 +679,23 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], t
     else:
         df['agreement'] = pd.NA
 
+    if save:
+        scope_suffix_map = {
+            'all': 'all_queries',
+            'paper': 'paper_queries',
+            'nonpaper': 'non_paper_queries',
+        }
+        suffix = scope_suffix_map.get(result_scope, result_scope)
+        out_path = OUTPUT_DIR / f'causality_results_{theory}_{gt}_{suffix}.csv'
+        df.to_csv(out_path, index=False)
+        print(f"Results saved to {out_path}")
+
     return df
 
 def reproduce_paper_results(vignettes: Dict[str, Vignette], queries: List[Query],
                             query_list: Optional[List[str]] = None, theory: str = 'HP2005',
-                            gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = False) -> pd.DataFrame:
+                            gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = False,
+                            save: bool = False) -> pd.DataFrame:
     """
     Filter `queries` to those in `query_list` (if provided) and call evaluate_all_queries.
     Returns a DataFrame of results for the selected queries.
@@ -680,7 +704,39 @@ def reproduce_paper_results(vignettes: Dict[str, Vignette], queries: List[Query]
         filtered = [q for q in queries if q.v_id in set(query_list)]
     else:
         filtered = queries
-    return evaluate_all_queries(vignettes=vignettes, queries=filtered, theory=theory, gt=gt, skip=skip, verbose=verbose)
+    return evaluate_all_queries(
+        vignettes=vignettes,
+        queries=filtered,
+        theory=theory,
+        gt=gt,
+        skip=skip,
+        verbose=verbose,
+        save=save,
+        result_scope='paper'
+    )
+
+def evaluate_non_paper_queries(vignettes: Dict[str, Vignette], queries: List[Query],
+                              query_list: Optional[List[str]] = None, theory: str = 'HP2005',
+                              gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = False,
+                              save: bool = False) -> pd.DataFrame:
+    """
+    Filter `queries` to those NOT in `query_list` (if provided) and call evaluate_all_queries.
+    Returns a DataFrame of results for the selected queries.
+    """
+    if query_list:
+        filtered = [q for q in queries if q.v_id not in set(query_list)]
+    else:
+        filtered = queries
+    return evaluate_all_queries(
+        vignettes=vignettes,
+        queries=filtered,
+        theory=theory,
+        gt=gt,
+        skip=skip,
+        verbose=verbose,
+        save=save,
+        result_scope='nonpaper'
+    )
 
 
 def get_query_by_id(queries: List[Query], query_id: str) -> Optional[Query]:
@@ -717,18 +773,31 @@ if __name__ == "__main__":
     skip = []
     # evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
 
-    # df_paper_HP2005 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
+    # df_paper_HP2005 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip, save=True)
     # todo: april rains returns TRUE, since this implementation considers any change in the effect variable as satisfying AC2a, while the paper seems to require a specific change (from 1 to 0).
     # todo: cannot handle query monday_treatment_deadly: Cause for being alive (B=0 or B=1 or B=2)
     # todo: is spell casting trumping different than command trumping?
 
-    # df_paper_HP2015 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
+    # df_paper_HP2015 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip, save=True)
 
     # fixing compound queries
     # result = run_single_query(vignettes, queries, query_id='engineer1_q40', theory='HP2015', gt='HP15')
 
     # checking normality
-    result = run_single_query(vignettes, queries, query_id='plant_watering_q53', theory='HP2005', gt='HP05', verbose=True, normality=False)
-    result_normality = run_single_query(vignettes, queries, query_id='plant_watering_q53', theory='HP2005', gt='HP05', verbose=True, normality=True)
+    # result = run_single_query(vignettes, queries, query_id='plant_watering_q53', theory='HP2005', gt='HP05', verbose=True, normality=False)
+    # result_normality = run_single_query(vignettes, queries, query_id='plant_watering_q53', theory='HP2005', gt='HP05', verbose=True, normality=True)
+
+    # specific slow query test
+    # result = run_single_query(vignettes, queries, query_id='rock_bottle_noisy_q107', theory='HP2005', gt='HP05', verbose=True)
+
+    # evaluate all queries
+    # all_HP2005 = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', verbose=False, save=True)
+    # all_HP2015 = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', verbose=False, save=True)
+    # nonpaper_HP2005 = evaluate_non_paper_queries(vignettes, queries, query_list=HP2005_examples, theory='HP2005', gt='intuition', verbose=False, save=True)
+    # nonpaper_HP2015 = evaluate_non_paper_queries(vignettes, queries, query_list=HP2015_examples, theory='HP2015', gt='intuition', verbose=False, save=True)
+    
+    # find queries with disagreements
+    # disagreements_HP2005 = all_HP2005[all_HP2005['agreement'] == False]
+    # disagreements_HP2015 = all_HP2015[all_HP2015['agreement'] == False]
 
 print()

@@ -77,10 +77,10 @@ class Vignette:
             information.
     """
 
-    def __init__(self, vignette_id, title, description, variables, ranges, values, default_values, equations, context):
+    def __init__(self, vignette_id, title, vignette_text, variables, ranges, values, default_values, equations, context):
         self.vignette_id = vignette_id
         self.title = title
-        self.description = description
+        self.vignette_text = vignette_text
         self.variables = variables
         self.context = context
         self.ranges = ranges
@@ -302,7 +302,7 @@ def load_vignettes(vignettes_csv_path, variables_csv_path):
         vignettes[vignette_data.v_id] = Vignette(
                 vignette_id=f'v{j}_' + vignette_data.v_id,
                 title=vignette_data.title,
-                description=vignette_data.description,
+                vignette_text=vignette_data.vignette_text if pd.notna(vignette_data.vignette_text) and vignette_data.vignette_text != '' else None,
                 variables=variables,
                 context = context,
                 ranges=ranges,
@@ -379,13 +379,10 @@ def _format_and_print_result(res: EvaluationResult, vignette_title: Optional[str
 def setting_is_at_least_as_normal(vignette, w_setting):
     """Check if the setting w_setting is at least as normal as the vignette's context."""
     # TODO: Redo typicality ordering for each variable in variables.csv instead of just one default value
-    for var, val in vignette.context.items():
-        pass
-    for var, val in w_setting.items():
-        if var in vignette.context:
-            if vignette.context[var] == vignette.default_values[var]:
-                if val != vignette.default_values[var]:
-                    return False
+    for context_var, context_val in vignette.context.items():
+        if context_val == vignette.default_values[context_var]:
+            if vignette.values[context_var] != context_val:
+                return False
     return True                
                 
 
@@ -431,13 +428,14 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             groundtruth=None, details="Unsupported query object type."
         )
 
-    # Basic checks / AC1
+    # Basic checks
     for cause_variable in cause_variables:
         if cause_variable not in vignette.variables:
             raise ValueError(f"Cause variable {cause_variable} is not in the vignette.")
     if effect_variable not in vignette.variables:
         raise ValueError(f"Effect variable {effect_variable} is not in the vignette.")
-
+    
+    # AC1
     # Check all cause variables match their expected values in the example
     for cause_variable, cause_value in zip(cause_variables, cause_values):
         if vignette.values_in_example.get(cause_variable) != cause_value:
@@ -472,7 +470,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
         witness_str = None
 
         # Iterate over all combinations of alternative values for the causes
-        for x_primes in itertools.product(*cause_alternatives): #TODO: move contrastive effect handling here
+        for x_primes in itertools.product(*cause_alternatives): #TODO: move contrastive effect handling here for efficiency
             # Variables that are not in the cause set
             non_cause_vars = set(vignette.variables) - set(cause_variables)
             
@@ -488,6 +486,8 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
                 for var in subset_w:
                     vignette.set_value(var, vignette.values_in_example[var])
                 vignette.propagate_set_values()
+
+                # TODO: add normality check here
 
                 # Check if effect differs from effect_value
                 effect_differs = vignette.values[effect_variable] != effect_value
@@ -520,7 +520,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             
             # Verify all cause variables are in Z
             if not cause_set.issubset(set(Z)):
-                continue
+                raise ValueError(f"Cause variables {cause_set} are not in Z={Z}.")
             
             # Generate alternative value combinations for all cause variables
             cause_alternatives = []
@@ -543,11 +543,12 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
                         vignette.set_value(var, val)
                     vignette.propagate_set_values()
                     
-                    # TODO: should be under HP2015, not here
-                    # normality_condition = None # TODO: record in EvaluationResult if normality kicked in 
-                    # if normality:
-                    #     if setting_is_at_least_as_normal(vignette, w_setting) is False:
-                    #         continue
+                    # Halpern & Hitchcock (2015) extension: normality check
+                    normality_condition = None # TODO: record in EvaluationResult if normality kicked in 
+                    if normality:
+                        exo_vals = None
+                        if setting_is_at_least_as_normal(vignette, w_setting) is False:
+                            continue
 
                     # AC2a check: effect must differ from effect_value
                     effect_differs = vignette.values[effect_variable] != effect_value
@@ -691,7 +692,7 @@ def get_query_by_id(queries: List[Query], query_id: str) -> Optional[Query]:
 
 
 def run_single_query(vignettes: Dict[str, Vignette], queries: List[Query], query_id: str,
-                     theory: str = 'HP2015', gt: str = 'intuition', verbose: bool = True) -> EvaluationResult:
+                     theory: str = 'HP2015', gt: str = 'intuition', verbose: bool = True, normality: bool = False) -> EvaluationResult:
     """Run `check_causality` for a single query identified by `query_id` and return the EvaluationResult.
 
     Raises a ValueError if the query or vignette cannot be found.
@@ -702,7 +703,7 @@ def run_single_query(vignettes: Dict[str, Vignette], queries: List[Query], query
     if q.v_id not in vignettes:
         raise ValueError(f"Vignette {q.v_id} for query {query_id} not found")
 
-    res = check_causality(theory, vignettes[q.v_id], q, gt=gt)
+    res = check_causality(theory, vignettes[q.v_id], q, gt=gt, normality=normality)
     _format_and_print_result(res, vignette_title=vignettes[q.v_id].title if q.v_id in vignettes else None, verbose=verbose)
     return res
 
@@ -713,17 +714,21 @@ if __name__ == "__main__":
     queries = load_queries(queries_path)
     # check_causality('HP2005', vignettes['ff_disj'], queries[0]) # test call for single query
     skip = ['rock_bottle_noisy', 'rock_bottle_time']
-    # skip = []
+    skip = []
     # evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
 
-    df_paper_HP2005 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
+    # df_paper_HP2005 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip)
     # todo: april rains returns TRUE, since this implementation considers any change in the effect variable as satisfying AC2a, while the paper seems to require a specific change (from 1 to 0).
     # todo: cannot handle query monday_treatment_deadly: Cause for being alive (B=0 or B=1 or B=2)
     # todo: is spell casting trumping different than command trumping?
 
-    df_paper_HP2015 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
+    # df_paper_HP2015 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip)
 
     # fixing compound queries
-    result = run_single_query(vignettes, queries, query_id='engineer1_q40', theory='HP2015', gt='HP15')
+    # result = run_single_query(vignettes, queries, query_id='engineer1_q40', theory='HP2015', gt='HP15')
+
+    # checking normality
+    result = run_single_query(vignettes, queries, query_id='plant_watering_q53', theory='HP2005', gt='HP05', verbose=True, normality=False)
+    result_normality = run_single_query(vignettes, queries, query_id='plant_watering_q53', theory='HP2005', gt='HP05', verbose=True, normality=True)
 
 print()

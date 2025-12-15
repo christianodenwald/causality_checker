@@ -8,19 +8,32 @@ queries = load_queries(queries_path)
 vignettes = load_vignettes(vignettes_path, variables_path)
 
 
-def llm_answer(vignette: Vignette, query: Query, model) -> EvaluationResult:
+def llm_answer(vignette: Vignette, query: Query, model: str, cot: bool = False) -> EvaluationResult:
     # results = {}
     # for query in queries:
     if query.query_text and vignettes[query.v_id].vignette_text:
-        prompt = f'Answer the question about the following scenario with just "Yes" or "No". Do not use any other words. Use only one word. \n Scenario: {vignettes[query.v_id].vignette_text}\n Question: {query.query_text}'
-        result = ollama.generate(model=model, prompt=prompt)
-        response = result['response'].strip().replace('.', '')
-        if response == 'Yes':
-            response_bool = True
-        elif response == 'No':
-            response_bool = False
-        else:
-            raise ValueError(f"Unexpected LLM response: {response}")
+        if cot:
+            # prompt = f'Think step by step to answer the question about the following scenario. The final words of your answer should be: "ANSWER: YES" or "ANSWER: NO". \n Scenario: {vignettes[query.v_id].vignette_text}\n Question: {query.query_text}'
+            prompt = f'You are a careful reasoner. For the following yes/no question about the scenario, first think step by step about the facts and logic involved. Write your reasoning in detail.\n\nScenario:\n{vignettes[query.v_id].vignette_text}\n\nQuestion: {query.query_text}\n\nReasoning:\n\n[Your step-by-step reasoning here]\nFinal Answer: Yes or No (only one word, nothing else)'
+            result = ollama.generate(model=model, prompt=prompt)
+            response = result['response'].strip().replace('.', '').replace('*', '')
+            if 'Final Answer: Yes' in response:
+                response_bool = True
+            elif 'Final Answer: No' in response:
+                response_bool = False
+            else:
+                response_bool = None
+                # raise ValueError(f"Unexpected LLM response: {result['response']}")
+        else:   
+            prompt = f'Answer the question about the following scenario with just "Yes" or "No". Do not use any other words. Use only one word. \n Scenario: {vignettes[query.v_id].vignette_text}\n Question: {query.query_text}'
+            result = ollama.generate(model=model, prompt=prompt)
+            response = result['response'].strip().replace('.', '')
+            if response == 'Yes':
+                response_bool = True
+            elif response == 'No':
+                response_bool = False
+            else:
+                raise ValueError(f"Unexpected LLM response: {response}")
         # results[query.query_id] = response_bool
         return EvaluationResult(
                     v_id=query.v_id, 
@@ -33,7 +46,7 @@ def llm_answer(vignette: Vignette, query: Query, model) -> EvaluationResult:
                     witness=None, 
                     gt_label= 'intuition', 
                     groundtruth=query.groundtruth.get('intuition'),
-                    details=f"LLM response: {response}",
+                    details=f"LLM response: {result['response']}",
                 )
     else:
         print(f"Skipping query {query.query_id} for vignette {query.v_id} due to missing text or vignette description.")
@@ -45,7 +58,8 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
                     verbose: bool = False, 
                     save: bool = False,
                     result_scope: str = 'all',
-                    model: str = 'llama3.2') -> pd.DataFrame:
+                    model: str = 'llama3.2',
+                    cot: bool = False) -> pd.DataFrame:
 
     records: List[Dict[str, Any]] = []
     skip = set(skip or [])
@@ -58,8 +72,10 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
             if verbose:
                 print(f"Warning: vignette {query.v_id} not found. Skipping.")
             continue
-
-        res = llm_answer(vignettes[query.v_id], query, model=model)
+        
+        print(f"Processing query {i+1}/{len(queries)}: Vignette ID {query.v_id}, Query ID {query.query_id}...") #, end=' ')
+        res = llm_answer(vignettes[query.v_id], query, model=model, cot=cot)
+        # print("Result:", res.result)
         _format_and_print_result(res, vignette_title=vignettes[query.v_id].title if query.v_id in vignettes else None, verbose=verbose)
         if res is not None and hasattr(res, '__dataclass_fields__'):
             records.append(asdict(res))
@@ -86,7 +102,7 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
             'nonpaper': 'non_paper_queries',
         }
         suffix = scope_suffix_map.get(result_scope, result_scope)
-        out_path = OUTPUT_DIR / f'causality_results_{model}_{gt}_{suffix}.csv'
+        out_path = OUTPUT_DIR / f'causality_results_{model}{"_cot" if cot else ""}_{gt}_{suffix}.csv'
         df.to_csv(out_path, index=False)
         print(f"Results saved to {out_path}")
 
@@ -96,6 +112,9 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
 
 if __name__ == "__main__":  
     model = 'llama3.2'
-    llm_results = run_llm_queries(vignettes=vignettes, queries=queries, gt='intuition', verbose=False, save=True, model=model)
+    # model = 'gemma3'
+    # model = 'ministral-3'
+    # llm_results = run_llm_queries(vignettes=vignettes, queries=queries, gt='intuition', verbose=False, save=True, cot=False, model=model)
+    llm_results_cot = run_llm_queries(vignettes=vignettes, queries=queries, gt='intuition', verbose=False, save=True, cot=True, model=model)
 
 print()

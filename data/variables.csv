@@ -50,6 +50,9 @@ switch3,F,Flipper flips switch,"0,1",,,
 switch3,LT,Train goes on left track,"0,1",,,not F
 switch3,RT,Train goes on right track,"0,1",,,F
 switch3,A,Train arrives,"0,1",,,LT or RT
+dog_bite,DB,Dog bites Jim's right hand,"0,1",,,
+dog_bite,P,Jim presses the button not at all / with right hand / with left hand,"0,1,2",,,DB + 1
+dog_bite,B,Bomb detonates,"0,1",,,P >= 1
 early_preemption_iso,A,Antidote put in coffee,"0,1",,,
 early_preemption_iso,B,Buddy puts poison in coffee,"0,1",,,A
 early_preemption_iso,D,Victim dies,"0,1",,,not A and B

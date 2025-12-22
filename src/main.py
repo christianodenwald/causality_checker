@@ -92,8 +92,19 @@ class Vignette:
         self.default_values = default_values
 
         self.equations = self.parse_equations(equations)
+        self.equations_str = equations  # Keep original string equations for reference
+        self.children = self.child_variables()
         self.values_in_example = {}
         self.values_in_example = self.set_values_in_example_from_context()
+
+    def child_variables(self):
+        """Determines child variables for each variable based on equations."""
+        children = {var: [] for var in self.variables}
+        for var, equation in self.equations_str.items():
+            for potential_parent in self.variables:
+                if potential_parent != var and potential_parent in equation:
+                    children[potential_parent].append(var)
+        return children
 
     def parse_equations(self, equations):
         """
@@ -110,6 +121,20 @@ class Vignette:
             else:
                 raise ValueError(f"Equation for {var} must be a string or callable.")
         return parsed_equations
+    
+    def overwrite_equation(self, var, new_equation):
+        """
+        Overwrites the equation for a specific variable.
+        The new_equation can be a string or a callable function.
+        """
+        if isinstance(new_equation, str):
+            self.equations[var] = lambda values, eq=new_equation: int(
+                eval(eq, {}, {k: int(v) if v is not None else 0 for k, v in values.items()}))
+        elif callable(new_equation):
+            self.equations[var] = new_equation
+        else:
+            raise ValueError(f"New equation for {var} must be a string or callable.")
+
 
     def update_values(self):
         """Updates all values based on equations."""
@@ -440,22 +465,24 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
     if effect_variable not in vignette.variables:
         raise ValueError(f"Effect variable {effect_variable} is not in the vignette.")
     
-    # AC1
-    # Check all cause variables match their expected values in the example
-    for cause_variable, cause_value in zip(cause_variables, cause_values):
-        if vignette.values_in_example.get(cause_variable) != cause_value:
+    if theory in ['HP2005', 'HP2015']:
+        # HP style theories
+        # AC1
+        # Check all cause variables match their expected values in the example
+        for cause_variable, cause_value in zip(cause_variables, cause_values):
+            if vignette.values_in_example.get(cause_variable) != cause_value:
+                return EvaluationResult(
+                    v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
+                    result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
+                    details=f"AC1 violated: cause {cause_variable} actual={vignette.values_in_example.get(cause_variable)} != {cause_value}"
+                )
+
+        if vignette.values_in_example.get(effect_variable) != effect_value:
             return EvaluationResult(
                 v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
                 result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
-                details=f"AC1 violated: cause {cause_variable} actual={vignette.values_in_example.get(cause_variable)} != {cause_value}"
+                details=f"AC1 violated: effect actual={vignette.values_in_example.get(effect_variable)} != {effect_value}"
             )
-
-    if vignette.values_in_example.get(effect_variable) != effect_value:
-        return EvaluationResult(
-            v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
-            result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
-            details=f"AC1 violated: effect actual={vignette.values_in_example.get(effect_variable)} != {effect_value}"
-        )
 
     # For HP2015
     if theory == 'HP2015':
@@ -510,12 +537,13 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
 
     # For HP2005
     elif theory == 'HP2005':
-        if qid == 'rock_bottle_noisy_q107':
-            return EvaluationResult(
-                v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
-                result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
-                details="Hardcoded skip for rock_bottle_noisy_q107 due to performance issues (takes 10 minutes on M4 MacBook)."
-            )
+        # if (query.v_id == 'rock_bottle_time' and query.cause == 'BT=1' and query.effect == 'BS3=1') or \
+        #    (query.v_id == 'rock_bottle_noisy' and query.cause == 'BT=1' and query.effect == 'BS3=1'):
+        #     return EvaluationResult(
+        #         v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
+        #         result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
+        #         details=f"Hardcoded skip for {qid} due to performance issues."
+        #     )
         evaluation_result = False
         witness_str = None
 
@@ -524,6 +552,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
         cause_set = set(cause_variables)
         non_cause_vars = [v for v in vignette.variables if v not in cause_set]
         
+        n = 0
         # Generate all possible splits where all cause variables are in Z
         for W_subset in powerset(non_cause_vars):
             W = list(W_subset)
@@ -573,6 +602,8 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
                     ac2b_satisfied = True
                     for subset_w in powerset(W):
                         for subset_z in powerset(Z):
+                            n += 1
+                            print(f'n={n}. Testing: w {subset_w} for z {subset_z}')
                             vignette.reset_values()
                             vignette.set_exogenous_values()
                             for w in subset_w:
@@ -595,6 +626,48 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             if evaluation_result:
                 break
 
+
+    # AC3: Check minimality - no proper subset of cause variables is itself a cause
+    # This applies to both HP2015 and HP2005
+    if theory in ['HP2005', 'HP2015']:
+        if evaluation_result and len(cause_variables) > 1:
+            # Check all proper subsets
+            for r in range(1, len(cause_variables)):
+                for subset_indices in itertools.combinations(range(len(cause_variables)), r):
+                    subset_vars = [cause_variables[i] for i in subset_indices]
+                    subset_vals = [cause_values[i] for i in subset_indices]
+                    
+                    # Create a Query object for this subset
+                    subset_cause_str = ' and '.join([f"{var}={val}" for var, val in zip(subset_vars, subset_vals)])
+                    subset_query = Query(
+                        v_id=query.v_id,
+                        cause=subset_cause_str,
+                        effect=query.effect,
+                        effect_contrast=query.effect_contrast,
+                        query_id=f"{qid}_subset"
+                    )
+                    
+                    # Recursively check if this subset is a cause
+                    subset_result = check_causality(theory, vignette, subset_query, gt=gt)
+                    if subset_result.result:
+                        # A proper subset is also a cause, so AC3 is violated
+                        return EvaluationResult(
+                            v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
+                            result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
+                            details=f"AC3 violated: proper subset {subset_cause_str} is also a cause"
+                        )
+
+        print(n)
+        return EvaluationResult(
+            v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
+            result=evaluation_result, witness=witness_str, gt_label=gt, groundtruth=query.groundtruth.get(gt)
+        )
+    
+        return EvaluationResult(
+            v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
+            result=evaluation_result, witness=witness_str, gt_label=gt, groundtruth=query.groundtruth.get(gt)
+        )
+
     else:
         return EvaluationResult(
             v_id=getattr(query, 'v_id', None), query_id=qid, cause=getattr(query, 'cause', None),
@@ -603,39 +676,6 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             effect_contrast=getattr(query, 'effect_contrast', None), details=f"Invalid/unsupported theory: {theory}"
         )
 
-    # AC3: Check minimality - no proper subset of cause variables is itself a cause
-    # This applies to both HP2015 and HP2005
-    if evaluation_result and len(cause_variables) > 1:
-        # Check all proper subsets
-        for r in range(1, len(cause_variables)):
-            for subset_indices in itertools.combinations(range(len(cause_variables)), r):
-                subset_vars = [cause_variables[i] for i in subset_indices]
-                subset_vals = [cause_values[i] for i in subset_indices]
-                
-                # Create a Query object for this subset
-                subset_cause_str = ' and '.join([f"{var}={val}" for var, val in zip(subset_vars, subset_vals)])
-                subset_query = Query(
-                    v_id=query.v_id,
-                    cause=subset_cause_str,
-                    effect=query.effect,
-                    effect_contrast=query.effect_contrast,
-                    query_id=f"{qid}_subset"
-                )
-                
-                # Recursively check if this subset is a cause
-                subset_result = check_causality(theory, vignette, subset_query, gt=gt)
-                if subset_result.result:
-                    # A proper subset is also a cause, so AC3 is violated
-                    return EvaluationResult(
-                        v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
-                        result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
-                        details=f"AC3 violated: proper subset {subset_cause_str} is also a cause"
-                    )
-
-    return EvaluationResult(
-        v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
-        result=evaluation_result, witness=witness_str, gt_label=gt, groundtruth=query.groundtruth.get(gt)
-    )
 
 
 ### EVALUATION FUNCTIONS
@@ -763,6 +803,38 @@ def run_single_query(vignettes: Dict[str, Vignette], queries: List[Query], query
     _format_and_print_result(res, vignette_title=vignettes[q.v_id].title if q.v_id in vignettes else None, verbose=verbose)
     return res
 
+def evaluate_vignette(vignette: Vignette, queries: List[Query], theory: str = 'HP2015',
+                      gt: str = 'HP2015', verbose: bool = False) -> pd.DataFrame:
+    """
+    Evaluate all queries for a single vignette.
+    Returns a DataFrame with results.
+    """
+    records: List[Dict[str, Any]] = []
+    for i, query in enumerate(queries):
+        if query.v_id != vignette.vignette_id.split('_', 1)[1]:  # not ideal but works with current vignette_id format
+            continue
+
+        res = check_causality(theory, vignette, query, gt=gt)
+        _format_and_print_result(res, vignette_title=vignette.title, verbose=verbose)
+        records.append(asdict(res))
+
+    df = pd.DataFrame.from_records(records)
+
+    # Ensure `effect_contrast` is integer dtype with NA support if present
+    if 'effect_contrast' in df.columns:
+        df['effect_contrast'] = pd.to_numeric(df['effect_contrast'], errors='coerce').astype('Int64')
+
+    # New column: agreement between computed `result` (bool) and `groundtruth` (0/1).
+    if 'groundtruth' in df.columns:
+        def _agreement(row):
+            if pd.isna(row['groundtruth']) or pd.isna(row.get('result')):
+                return pd.NA
+            return bool(row['result']) == bool(int(row['groundtruth']))
+        df['agreement'] = df.apply(_agreement, axis=1)
+    else:
+        df['agreement'] = pd.NA
+
+    return df
 
 
 if __name__ == "__main__":
@@ -771,33 +843,35 @@ if __name__ == "__main__":
     # check_causality('HP2005', vignettes['ff_disj'], queries[0]) # test call for single query
     skip = ['rock_bottle_noisy', 'rock_bottle_time']
     skip = []
-    # evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
 
+    # reproduce paper results
     # df_paper_HP2005 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip, save=True)
-    # todo: april rains returns TRUE, since this implementation considers any change in the effect variable as satisfying AC2a, while the paper seems to require a specific change (from 1 to 0).
-    # todo: cannot handle query monday_treatment_deadly: Cause for being alive (B=0 or B=1 or B=2)
-    # todo: is spell casting trumping different than command trumping?
-
     # df_paper_HP2015 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2015_examples, theory='HP2015', gt='HP15', skip=skip, save=True)
 
-    # fixing compound queries
-    # result = run_single_query(vignettes, queries, query_id='engineer1_q40', theory='HP2015', gt='HP15')
+    # compound queries demonstration
+    # result_compound = run_single_query(vignettes, queries, query_id='engineer1_q40', theory='HP2015', gt='HP15')
 
     # checking normality
-    # result = run_single_query(vignettes, queries, query_id='plant_watering_q53', theory='HP2005', gt='HP05', verbose=True, normality=False)
+    # result_no_normality = run_single_query(vignettes, queries, query_id='plant_watering_q53', theory='HP2005', gt='HP05', verbose=True, normality=False)
     # result_normality = run_single_query(vignettes, queries, query_id='plant_watering_q53', theory='HP2005', gt='HP05', verbose=True, normality=True)
 
     # specific slow query test
-    # result = run_single_query(vignettes, queries, query_id='rock_bottle_noisy_q107', theory='HP2005', gt='HP05', verbose=True)
+    result = run_single_query(vignettes, queries, query_id='rock_bottle_noisy_q111', theory='HP2005', gt='HP05', verbose=True)
 
     # evaluate all queries
-    # all_HP2005 = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', verbose=False, save=True)
-    # all_HP2015 = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', verbose=False, save=True)
+    all_HP2005 = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', verbose=False, save=True)
+    all_HP2015 = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', verbose=False, save=True)
     # nonpaper_HP2005 = evaluate_non_paper_queries(vignettes, queries, query_list=HP2005_examples, theory='HP2005', gt='intuition', verbose=False, save=True)
     # nonpaper_HP2015 = evaluate_non_paper_queries(vignettes, queries, query_list=HP2015_examples, theory='HP2015', gt='intuition', verbose=False, save=True)
     
     # find queries with disagreements
     # disagreements_HP2005 = all_HP2005[all_HP2005['agreement'] == False]
     # disagreements_HP2015 = all_HP2015[all_HP2015['agreement'] == False]
+
+    # specific vignette
+    # affecting_df = evaluate_vignette(vignettes['affecting'], queries, theory='HP2015', gt='intuition', verbose=True)
+    # noisy_df = evaluate_vignette(vignettes['rock_bottle_noisy'], queries, theory='HP2015', gt='HP05', verbose=True)
+
+
 
 print()

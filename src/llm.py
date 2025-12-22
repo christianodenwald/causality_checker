@@ -9,8 +9,6 @@ vignettes = load_vignettes(vignettes_path, variables_path)
 
 
 def llm_answer(vignette: Vignette, query: Query, model: str, cot: bool = False) -> EvaluationResult:
-    # results = {}
-    # for query in queries:
     if query.query_text and vignettes[query.v_id].vignette_text:
         if cot:
             # prompt = f'Think step by step to answer the question about the following scenario. The final words of your answer should be: "ANSWER: YES" or "ANSWER: NO". \n Scenario: {vignettes[query.v_id].vignette_text}\n Question: {query.query_text}'
@@ -114,7 +112,7 @@ if __name__ == "__main__":
     model = 'llama3.2'
     # model = 'gemma3'
     # model = 'ministral-3'
-    # llm_results = run_llm_queries(vignettes=vignettes, queries=queries, gt='intuition', verbose=False, save=True, cot=False, model=model)
+    llm_results = run_llm_queries(vignettes=vignettes, queries=queries, gt='intuition', verbose=False, save=True, cot=False, model=model)
     llm_results_cot = run_llm_queries(vignettes=vignettes, queries=queries, gt='intuition', verbose=False, save=True, cot=True, model=model)
 
 print()

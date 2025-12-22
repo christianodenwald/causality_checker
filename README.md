@@ -7,42 +7,48 @@ Accompanying code for "A Comprehensive Collection of Vignettes for Actual Causat
 ```bash
 conda create -n causality_checker python=3.11 -y
 conda activate causality_checker
-pip install numpy pandas sympy ollama
+pip install numpy pandas ollama
 ```
 
-For LLM evaluation: `brew install ollama && ollama pull llama3.2`
+For LLM evaluation: `brew install ollama && ollama pull MODEL`
 
 ## Usage
 
-**Deterministic evaluation** (HP2005/HP2015):
-```python
-from src.main import load_vignettes, load_queries, evaluate_all_queries
+**Theories of actual causation** (HP2005/HP2015):
 
-vignettes = load_vignettes('data/vignettes.csv', 'data/variables.csv')
-queries = load_queries('data/queries.csv')
+in ```src/main.py```:
+
+```python
+vignettes = load_vignettes(vignettes_path, variables_path)
+queries = load_queries(queries_path)
 df = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', save=True)
 ```
 
-**LLM evaluation** (requires Ollama):
-```bash
-python src/llm.py  # Edit model/cot settings in __main__
+Single query:
+```python
+result = run_single_query(vignettes, queries, query_id='rock_bottle_noisy_q111', theory='HP2005', gt='HP05', verbose=True)
+
 ```
 
-**Single query**:
+**LLM evaluation** (requires Ollama):
+
+in ```src/llm.py```:
+
 ```python
-from src.main import run_single_query
-run_single_query(vignettes, queries, query_id='rock_bottle_q6', theory='HP2015')
+queries = load_queries(queries_path)
+vignettes = load_vignettes(vignettes_path, variables_path)
+llm_results = run_llm_queries(vignettes=vignettes, queries=queries, gt='intuition', verbose=False, save=True, cot=False, model=model)
+
 ```
+
 
 ## Data
 
 - `data/vignettes.csv`: vignettes with natural language text, variables, and context values
 - `data/variables.csv`: structural equations and ranges per variable
 - `data/queries.csv`: cause-effect queries with ground-truth labels (intuition, HP05, HP15, etc.)
-- `outputs/`: evaluation results saved as `causality_results_{theory}_{gt}_{scope}.csv`
+- `outputs/`: evaluation results saved as `causality_results_{theory/model}_{gt}_{scope}.csv`
 
-Convert Excel sources: `python src/update_csv.py`
+<!-- ## Citation
 
-## Citation
-
-Please cite the accompanying paper when using this code or dataset.
+Please cite the accompanying paper when using this code or dataset. -->

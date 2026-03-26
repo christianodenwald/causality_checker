@@ -670,15 +670,28 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], t
     if 'effect_contrast' in df.columns:
         df['effect_contrast'] = pd.to_numeric(df['effect_contrast'], errors='coerce').astype('Int64')
 
-    # New column: agreement between computed `result` (bool) and `groundtruth` (0/1).
+    # Confusion-matrix indicator columns based on `result` vs `groundtruth`.
     if 'groundtruth' in df.columns:
-        def _agreement(row):
+        def _confusion_flags(row):
             if pd.isna(row['groundtruth']) or pd.isna(row.get('result')):
-                return pd.NA
-            return bool(row['result']) == bool(int(row['groundtruth']))
-        df['agreement'] = df.apply(_agreement, axis=1)
+                return pd.Series({'TP': pd.NA, 'TN': pd.NA, 'FP': pd.NA, 'FN': pd.NA})
+
+            pred = bool(row['result'])
+            gt_val = bool(int(row['groundtruth']))
+            return pd.Series({
+                'TP': pred and gt_val,
+                'TN': (not pred) and (not gt_val),
+                'FP': pred and (not gt_val),
+                'FN': (not pred) and gt_val,
+            })
+
+        df[['TP', 'TN', 'FP', 'FN']] = df.apply(_confusion_flags, axis=1)
+        df[['TP', 'TN', 'FP', 'FN']] = df[['TP', 'TN', 'FP', 'FN']].astype('boolean')
     else:
-        df['agreement'] = pd.NA
+        df['TP'] = pd.NA
+        df['TN'] = pd.NA
+        df['FP'] = pd.NA
+        df['FN'] = pd.NA
 
     if save:
         scope_suffix_map = {

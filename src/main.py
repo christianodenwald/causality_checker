@@ -856,7 +856,7 @@ if __name__ == "__main__":
     # result_normality = run_single_query(vignettes, queries, query_id='plant_watering_q53', theory='HP2005', gt='HP05', verbose=True, normality=True)
 
     # specific slow query test
-    result = run_single_query(vignettes, queries, query_id='rock_bottle_noisy_q111', theory='HP2005', gt='HP05', verbose=True)
+    # result = run_single_query(vignettes, queries, query_id='rock_bottle_noisy_q111', theory='HP2005', gt='HP05', verbose=True)
 
     # evaluate all queries
     all_HP2005 = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', verbose=False, save=True)

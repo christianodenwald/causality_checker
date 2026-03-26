@@ -11,6 +11,11 @@ import pandas as pd
 from dataclasses import dataclass, asdict
 from data.paper_examples import *
 
+try:
+    from src.theories import THEORY_EVALUATORS
+except ModuleNotFoundError:
+    from theories import THEORY_EVALUATORS
+
 #### PATHS TO DATA FILES
 from pathlib import Path
 def resolve_data_path(filename: str) -> Path:
@@ -482,151 +487,55 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             details=f"AC1 violated: effect actual={vignette.values_in_example.get(effect_variable)} != {effect_value}"
         )
 
-    # For HP2015
-    if theory == 'HP2015':
-        # Get all alternative values for all cause variables
-        cause_alternatives = []
-        for cause_variable, cause_value in zip(cause_variables, cause_values):
-            alternatives = [val for val in vignette.ranges[cause_variable] if val != cause_value]
-            if not alternatives:
-                return EvaluationResult(
-                    v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
-                    result=None, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
-                    details=f"No alternative value found for {cause_variable}."
-                )
-            cause_alternatives.append(alternatives)
-
-        evaluation_result = False
-        witness_str = None
-
-        # Iterate over all combinations of alternative values for the causes
-        for x_primes in itertools.product(*cause_alternatives): #TODO: move contrastive effect handling here
-            # Variables that are not in the cause set
-            non_cause_vars = set(vignette.variables) - set(cause_variables)
-            
-            for subset_w in powerset(non_cause_vars):
-                vignette.reset_values()
-                vignette.set_exogenous_values()
-                
-                # Set all cause variables to their alternative values
-                for cause_variable, x_prime in zip(cause_variables, x_primes):
-                    vignette.set_value(cause_variable, x_prime)
-                
-                # Set witness variables to their example values
-                for var in subset_w:
-                    vignette.set_value(var, vignette.values_in_example[var])
-                vignette.propagate_set_values()
-
-                # TODO:normality            
-
-                # Check if effect differs from effect_value
-                effect_differs = vignette.values[effect_variable] != effect_value
-                # If effect_contrast is specified, also check that the value matches it
-                if query.effect_contrast is not None:
-                    effect_differs = effect_differs and vignette.values[effect_variable] == query.effect_contrast
-                
-                if effect_differs:
-                    evaluation_result = True
-                    witness_str = f"Witness: W={list(subset_w)}, w={[vignette.values[var] for var in subset_w]}, x'={list(x_primes)}"
-                    break
-            
-            if evaluation_result:
-                break
-
-    # For HP2005
-    elif theory == 'HP2005':
-        if qid == 'rock_bottle_noisy_q107':
-            return EvaluationResult(
-                v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
-                result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
-                details="Hardcoded skip for rock_bottle_noisy_q107 due to performance issues (takes 10 minutes on M4 MacBook)."
-            )
-        evaluation_result = False
-        witness_str = None
-
-        # For multiple causes, we need to handle them as a set
-        # The cause variables form a mandatory set that must be in Z
-        cause_set = set(cause_variables)
-        non_cause_vars = [v for v in vignette.variables if v not in cause_set]
-        
-        # Generate all possible splits where all cause variables are in Z
-        for W_subset in powerset(non_cause_vars):
-            W = list(W_subset)
-            Z = [v for v in vignette.variables if v not in W]
-            
-            # Verify all cause variables are in Z
-            if not cause_set.issubset(set(Z)):
-                raise ValueError("All cause variables must be in Z.")
-            
-            # Generate alternative value combinations for all cause variables
-            cause_alternatives = []
-            for cause_variable, cause_value in zip(cause_variables, cause_values):
-                alternatives = [val for val in vignette.ranges[cause_variable] if val != cause_value]
-                cause_alternatives.append(alternatives)
-            
-            for x_primes in itertools.product(*cause_alternatives):
-                # iterate over all settings for W
-
-                for w_settings in itertools.product(*[vignette.ranges[var] for var in W]):
-                    w_setting = {var: val for var, val in zip(W, w_settings)}
-                    vignette.reset_values()
-                    vignette.set_exogenous_values()
-                    
-                    # Set all cause variables to their alternative values
-                    for cause_variable, x_prime in zip(cause_variables, x_primes):
-                        vignette.set_value(cause_variable, x_prime)
-                    
-                    for var, val in w_setting.items():
-                        vignette.set_value(var, val)
-                    vignette.propagate_set_values()
-                    
-                    # Halpern & Hitchcock (2015) extension: normality check ("small worlds")
-                    normality_condition = None # TODO: record in EvaluationResult if normality kicked in 
-                    if normality:
-                        if setting_is_at_least_as_normal(vignette, w_setting) is False:
-                            continue
-
-                    # AC2a check: effect must differ from effect_value
-                    effect_differs = vignette.values[effect_variable] != effect_value
-                    # If effect_contrast is specified, also check that the value matches it
-                    if query.effect_contrast is not None:
-                        effect_differs = effect_differs and vignette.values[effect_variable] == query.effect_contrast
-                    
-                    if not effect_differs:  # simple but-for cause
-                        continue
-
-                    ac2b_satisfied = True
-                    for subset_w in powerset(W):
-                        for subset_z in powerset(Z):
-                            vignette.reset_values()
-                            vignette.set_exogenous_values()
-                            for w in subset_w:
-                                vignette.set_value(w, w_setting[w])
-                            for z in subset_z:
-                                vignette.set_value(z, vignette.values_in_example[z])
-                            vignette.propagate_set_values()
-                            if vignette.values[effect_variable] != effect_value:
-                                ac2b_satisfied = False
-                                break
-                        if not ac2b_satisfied:
-                            break
-
-                    if ac2b_satisfied:
-                        witness_str = f"Witness: W:w'={w_setting}, x'={list(x_primes)}"
-                        evaluation_result = True
-                        break
-                if evaluation_result:
-                    break
-            if evaluation_result:
-                break
-
-    else:
+    evaluator = THEORY_EVALUATORS.get(theory)
+    if evaluator is None:
         return EvaluationResult(
             v_id=getattr(query, 'v_id', None), query_id=qid, cause=getattr(query, 'cause', None),
             effect=getattr(query, 'effect', None), theory=theory, result=None, witness=None, gt_label=gt,
             groundtruth=getattr(query, 'groundtruth', {}).get(gt) if isinstance(query, Query) else None,
             effect_contrast=getattr(query, 'effect_contrast', None), details=f"Invalid/unsupported theory: {theory}"
         )
+
+    if theory == 'HP2005':
+        theory_eval = evaluator(
+            vignette=vignette,
+            query=query,
+            cause_variables=cause_variables,
+            cause_values=cause_values,
+            effect_variable=effect_variable,
+            effect_value=effect_value,
+            qid=qid,
+            normality=normality,
+            setting_is_at_least_as_normal=setting_is_at_least_as_normal,
+        )
+    else:
+        theory_eval = evaluator(
+            vignette=vignette,
+            query=query,
+            cause_variables=cause_variables,
+            cause_values=cause_values,
+            effect_variable=effect_variable,
+            effect_value=effect_value,
+        )
+
+    if theory_eval.get('terminal'):
+        return EvaluationResult(
+            v_id=query.v_id,
+            query_id=qid,
+            cause=query.cause,
+            effect=query.effect,
+            effect_contrast=query.effect_contrast,
+            theory=theory,
+            result=theory_eval.get('result'),
+            witness=theory_eval.get('witness'),
+            gt_label=gt,
+            groundtruth=query.groundtruth.get(gt),
+            details=theory_eval.get('details'),
+        )
+
+    evaluation_result = theory_eval.get('result')
+    witness_str = theory_eval.get('witness')
+    theory_details = theory_eval.get('details')
 
     # AC3: Check minimality - no proper subset of cause variables is itself a cause
     # This applies to both HP2015 and HP2005
@@ -659,7 +568,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
 
     return EvaluationResult(
         v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
-        result=evaluation_result, witness=witness_str, gt_label=gt, groundtruth=query.groundtruth.get(gt)
+        result=evaluation_result, witness=witness_str, gt_label=gt, groundtruth=query.groundtruth.get(gt), details=theory_details
     )
 
 

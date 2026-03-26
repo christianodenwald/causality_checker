@@ -8,11 +8,11 @@ queries = load_queries(queries_path)
 vignettes = load_vignettes(vignettes_path, variables_path)
 
 
-def llm_answer(vignette: Vignette, query: Query, model: str, cot: bool = False) -> EvaluationResult:
-    if query.query_text and vignettes[query.v_id].vignette_text:
+def llm_answer(vignette: Vignette, query: Query, model: str, cot: bool = False) -> Optional[EvaluationResult]:
+    if query.query_text and vignette.vignette_text:
         if cot:
             # prompt = f'Think step by step to answer the question about the following scenario. The final words of your answer should be: "ANSWER: YES" or "ANSWER: NO". \n Scenario: {vignettes[query.v_id].vignette_text}\n Question: {query.query_text}'
-            prompt = f'You are a careful reasoner. For the following yes/no question about the scenario, first think step by step about the facts and logic involved. Write your reasoning in detail.\n\nScenario:\n{vignettes[query.v_id].vignette_text}\n\nQuestion: {query.query_text}\n\nReasoning:\n\n[Your step-by-step reasoning here]\nFinal Answer: Yes or No (only one word, nothing else)'
+            prompt = f'You are a careful reasoner. For the following yes/no question about the scenario, first think step by step about the facts and logic involved. Write your reasoning in detail.\n\nScenario:\n{vignette.vignette_text}\n\nQuestion: {query.query_text}\n\nReasoning:\n\n[Your step-by-step reasoning here]\nFinal Answer: Yes or No (only one word, nothing else)'
             result = ollama.generate(model=model, prompt=prompt)
             response = result['response'].strip().replace('.', '').replace('*', '')
             if 'Final Answer: Yes' in response:
@@ -23,7 +23,7 @@ def llm_answer(vignette: Vignette, query: Query, model: str, cot: bool = False) 
                 response_bool = None
                 # raise ValueError(f"Unexpected LLM response: {result['response']}")
         else:   
-            prompt = f'Answer the question about the following scenario with just "Yes" or "No". Do not use any other words. Use only one word. \n Scenario: {vignettes[query.v_id].vignette_text}\n Question: {query.query_text}'
+            prompt = f'Answer the question about the following scenario with just "Yes" or "No". Do not use any other words. Use only one word. \n Scenario: {vignette.vignette_text}\n Question: {query.query_text}'
             result = ollama.generate(model=model, prompt=prompt)
             response = result['response'].strip().replace('.', '')
             if response == 'Yes':
@@ -48,6 +48,7 @@ def llm_answer(vignette: Vignette, query: Query, model: str, cot: bool = False) 
                 )
     else:
         print(f"Skipping query {query.query_id} for vignette {query.v_id} due to missing text or vignette description.")
+        return None
 
 def run_llm_queries(vignettes: Dict[str, Vignette], 
                     queries: List[Query], 
@@ -60,9 +61,9 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
                     cot: bool = False) -> pd.DataFrame:
 
     records: List[Dict[str, Any]] = []
-    skip = set(skip or [])
+    skip_set = set(skip or [])
     for i, query in enumerate(queries):
-        if query.v_id in skip:
+        if query.v_id in skip_set:
             if verbose:
                 print(f"Skipping query {i} for vignette {query.v_id}\n====================\n")
             continue
@@ -74,7 +75,8 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
         print(f"Processing query {i+1}/{len(queries)}: Vignette ID {query.v_id}, Query ID {query.query_id}...") #, end=' ')
         res = llm_answer(vignettes[query.v_id], query, model=model, cot=cot)
         # print("Result:", res.result)
-        _format_and_print_result(res, vignette_title=vignettes[query.v_id].title if query.v_id in vignettes else None, verbose=verbose)
+        if res is not None:
+            _format_and_print_result(res, vignette_title=vignettes[query.v_id].title if query.v_id in vignettes else None, verbose=verbose)
         if res is not None and hasattr(res, '__dataclass_fields__'):
             records.append(asdict(res))
 

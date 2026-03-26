@@ -217,13 +217,13 @@ class Query:
 
 @dataclass
 class EvaluationResult:
-    v_id: str
+    v_id: Optional[str]
     query_id: Optional[str]
-    cause: str
-    effect: str
+    cause: Optional[str]
+    effect: Optional[str]
     effect_contrast: Optional[int]
     theory: str
-    result: bool
+    result: Optional[bool]
     witness: Optional[str]
     gt_label: str
     groundtruth: Optional[int]
@@ -249,12 +249,20 @@ def load_vignettes(vignettes_csv_path, variables_csv_path):
     vignettes = dict()
 
 
-    for j, vignette_data in enumerate(vignettes_df.itertuples(index=True)):
-        variable_data = variables_df.loc[variables_df.se_id == vignette_data.se_id]
+    for j, (_, vignette_row) in enumerate(vignettes_df.iterrows()):
+        variable_data = variables_df.loc[variables_df.se_id == vignette_row['se_id']]
 
-        variables = vignette_data.variable_order
+        variables_raw = vignette_row.get('variable_order', [])
+        context_raw = vignette_row.get('context', [])
+        if not isinstance(variables_raw, list) or not isinstance(context_raw, list):
+            raise ValueError(
+                f"Invalid list-like values for vignette row {j}: variable_order={type(variables_raw)}, context={type(context_raw)}"
+            )
 
-        values = {var: int(vignette_data.context[i]) if i < len(vignette_data.context) else np.nan for i, var in
+        variables = [str(var).strip() for var in variables_raw]
+        context_values = [str(val).strip() for val in context_raw]
+
+        values = {var: int(context_values[i]) if i < len(context_values) else np.nan for i, var in
                   enumerate(variables)}
 
         # default_values = dict()
@@ -286,10 +294,10 @@ def load_vignettes(vignettes_csv_path, variables_csv_path):
                 equations[row['variable_name']] = row['structural_equation']
 
         context = dict()
-        context_length = len(vignette_data.context)
-        context_vars = vignette_data.variable_order[:context_length]
+        context_length = len(context_values)
+        context_vars = variables[:context_length]
         for i in range(context_length):
-            context[context_vars[i]] = int(vignette_data.context[i])
+            context[context_vars[i]] = int(context_values[i])
 
 
         ranges = dict()
@@ -302,11 +310,11 @@ def load_vignettes(vignettes_csv_path, variables_csv_path):
                 ranges[var] = None
         # values_in_example = dict()
 
-        # print(f"Vignette ID: {vignette_data.v_id}")
-        vignettes[vignette_data.v_id] = Vignette(
-                vignette_id=f'v{j}_' + vignette_data.v_id,
-                title=vignette_data.title,
-                vignette_text=vignette_data.vignette_text if pd.notna(vignette_data.vignette_text) and vignette_data.vignette_text != '' else None,
+        # print(f"Vignette ID: {vignette_row['v_id']}")
+        vignettes[vignette_row['v_id']] = Vignette(
+            vignette_id=f"v{j}_{vignette_row['v_id']}",
+            title=vignette_row['title'],
+            vignette_text=vignette_row['vignette_text'] if pd.notna(vignette_row['vignette_text']) and vignette_row['vignette_text'] != '' else None,
                 variables=variables,
                 context = context,
                 ranges=ranges,
@@ -399,8 +407,25 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
     # Extract cause/effect from Query
     qid = getattr(query, 'query_id', None)
     if isinstance(query, Query):
+        if query.cause is None or query.effect is None:
+            return EvaluationResult(
+                v_id=query.v_id,
+                query_id=qid,
+                cause=query.cause,
+                effect=query.effect,
+                effect_contrast=query.effect_contrast,
+                theory=theory,
+                result=None,
+                witness=None,
+                gt_label=gt,
+                groundtruth=query.groundtruth.get(gt),
+                details="Missing cause or effect in query."
+            )
+
+        cause_text = query.cause
+        effect_text = query.effect
         # Parse compound causes (e.g., "MD=1 and L=1")
-        cause_parts = [part.strip() for part in query.cause.split(' and ')]
+        cause_parts = [part.strip() for part in cause_text.split(' and ')]
         cause_variables = []
         cause_values = []
         for part in cause_parts:
@@ -415,13 +440,13 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             cause_values.append(int(val.strip()))
         
         # Parse effect (single variable for now)
-        if len(query.effect.split('=')) != 2:
+        if len(effect_text.split('=')) != 2:
             return EvaluationResult(
                 v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
                 result=None, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
                 details="Invalid effect format."
             )
-        effect_variable, effect_value = query.effect.split('=')
+        effect_variable, effect_value = effect_text.split('=')
         effect_value = int(effect_value)
     else:
         return EvaluationResult(
@@ -648,9 +673,9 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], t
     Returns a DataFrame with results.
     """
     records: List[Dict[str, Any]] = []
-    skip = set(skip or [])
+    skip_set = set(skip or [])
     for i, query in enumerate(queries):
-        if query.v_id in skip:
+        if query.v_id in skip_set:
             if verbose:
                 print(f"Skipping query {i} for vignette {query.v_id}\n====================\n")
             continue

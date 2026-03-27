@@ -10,7 +10,14 @@ conda activate causality_checker
 pip install numpy pandas ollama
 ```
 
-For LLM evaluation: `brew install ollama && ollama pull MODEL`
+To run with OpenAI models:
+
+```bash
+pip install openai
+export OPENAI_API_KEY="your_api_key_here"
+```
+
+For Ollama-based LLM evaluation: `brew install ollama && ollama pull MODEL`
 
 ## Usage
 
@@ -30,7 +37,7 @@ result = run_single_query(vignettes, queries, query_id='rock_bottle_noisy_q111',
 
 ```
 
-**LLM evaluation** (requires Ollama):
+**LLM evaluation** (Ollama or OpenAI):
 
 in ```src/llm.py```:
 
@@ -40,6 +47,10 @@ vignettes = load_vignettes(vignettes_path, variables_path)
 llm_results = run_llm_queries(vignettes=vignettes, queries=queries, gt='intuition', verbose=False, save=True, cot=False, model=model)
 
 ```
+
+Provider selection is inferred from `model`:
+- OpenAI: if it starts with `gpt`
+- Ollama: any other model string (for example `llama3.2`, `gemma3`, `ministral-3`)
 
 
 ## Data

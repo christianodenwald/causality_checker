@@ -5,6 +5,8 @@ import pandas as pd
 
 CM_COLS = ["TP", "TN", "FP", "FN"]
 
+OUTPUT_DIR = Path("outputs/pre-subm/")
+
 
 def short_name(path: Path) -> str:
     name = path.stem
@@ -65,14 +67,14 @@ def summarize_file(path: Path) -> dict:
 
 def main() -> None:
     files = [
-        Path("outputs/causality_results_HP2005_intuition_all_queries.csv"),
-        Path("outputs/causality_results_HP2015_intuition_all_queries.csv"),
-        Path("outputs/causality_results_llama3.2_intuition_all_queries.csv"),
-        # Path("outputs/causality_results_llama3.2_cot_intuition_all_queries.csv"),
-        Path("outputs/causality_results_ministral-3_intuition_all_queries.csv"),
-        Path("outputs/causality_results_ministral-3_cot_intuition_all_queries.csv"),
-        Path("outputs/causality_results_gemma3_intuition_all_queries.csv"),
-        Path('outputs/causality_results_gemma3_cot_intuition_all_queries.csv')
+        Path(OUTPUT_DIR / "causality_results_HP2005_intuition_all_queries.csv"),
+        Path(OUTPUT_DIR / "causality_results_HP2015_intuition_all_queries.csv"),
+        Path(OUTPUT_DIR / "causality_results_llama3.2_intuition_all_queries.csv"),
+        # Path(OUTPUT_DIR / "causality_results_llama3.2_cot_intuition_all_queries.csv"),
+        Path(OUTPUT_DIR / "causality_results_ministral-3_intuition_all_queries.csv"),
+        Path(OUTPUT_DIR / "causality_results_ministral-3_cot_intuition_all_queries.csv"),
+        Path(OUTPUT_DIR / "causality_results_gemma3_intuition_all_queries.csv"),
+        Path(OUTPUT_DIR / "causality_results_gemma3_cot_intuition_all_queries.csv")
     ]
     save_path = None  # e.g. Path("outputs/results_summary_metrics.csv")
 

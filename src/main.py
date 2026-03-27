@@ -407,6 +407,35 @@ def _format_and_print_result(res: EvaluationResult, vignette_title: Optional[str
         print(res.details)
     print("====================\n")
 
+
+def add_confusion_matrix_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Return a DataFrame with TP/TN/FP/FN indicator columns derived from result and groundtruth."""
+    out = df.copy()
+
+    if 'groundtruth' in out.columns:
+        def _confusion_flags(row):
+            if pd.isna(row['groundtruth']) or pd.isna(row.get('result')):
+                return pd.Series({'TP': pd.NA, 'TN': pd.NA, 'FP': pd.NA, 'FN': pd.NA})
+
+            pred = bool(row['result'])
+            gt_val = bool(int(row['groundtruth']))
+            return pd.Series({
+                'TP': pred and gt_val,
+                'TN': (not pred) and (not gt_val),
+                'FP': pred and (not gt_val),
+                'FN': (not pred) and gt_val,
+            })
+
+        out[['TP', 'TN', 'FP', 'FN']] = out.apply(_confusion_flags, axis=1)
+        out[['TP', 'TN', 'FP', 'FN']] = out[['TP', 'TN', 'FP', 'FN']].astype('boolean')
+    else:
+        out['TP'] = pd.NA
+        out['TN'] = pd.NA
+        out['FP'] = pd.NA
+        out['FN'] = pd.NA
+
+    return out
+
 def setting_is_at_least_as_normal(vignette, w_setting):
     """Check if the setting w_setting is at least as normal as the vignette's context."""
     # TODO: Redo typicality ordering for each variable in variables.csv instead of just one default value
@@ -589,28 +618,7 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], t
     if 'effect_contrast' in df.columns:
         df['effect_contrast'] = pd.to_numeric(df['effect_contrast'], errors='coerce').astype('Int64')
 
-    # Confusion-matrix indicator columns based on `result` vs `groundtruth`.
-    if 'groundtruth' in df.columns:
-        def _confusion_flags(row):
-            if pd.isna(row['groundtruth']) or pd.isna(row.get('result')):
-                return pd.Series({'TP': pd.NA, 'TN': pd.NA, 'FP': pd.NA, 'FN': pd.NA})
-
-            pred = bool(row['result'])
-            gt_val = bool(int(row['groundtruth']))
-            return pd.Series({
-                'TP': pred and gt_val,
-                'TN': (not pred) and (not gt_val),
-                'FP': pred and (not gt_val),
-                'FN': (not pred) and gt_val,
-            })
-
-        df[['TP', 'TN', 'FP', 'FN']] = df.apply(_confusion_flags, axis=1)
-        df[['TP', 'TN', 'FP', 'FN']] = df[['TP', 'TN', 'FP', 'FN']].astype('boolean')
-    else:
-        df['TP'] = pd.NA
-        df['TN'] = pd.NA
-        df['FP'] = pd.NA
-        df['FN'] = pd.NA
+    df = add_confusion_matrix_columns(df)
 
     if save:
         scope_suffix_map = {

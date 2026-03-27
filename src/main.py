@@ -96,9 +96,23 @@ class Vignette:
         self.values = values
         self.default_values = default_values
 
+        self.equations_str = equations  # Keep original string equations for reference
         self.equations = self.parse_equations(equations)
+        self.children = self.child_variables()
         self.values_in_example = {}
         self.values_in_example = self.set_values_in_example_from_context()
+
+    def child_variables(self):
+        """Determines child variables for each variable based on equations."""
+        children = {var: [] for var in self.variables}
+        for var, equation in self.equations_str.items():
+            # Only string equations can be scanned for parent-variable mentions.
+            if not isinstance(equation, str):
+                continue
+            for potential_parent in self.variables:
+                if potential_parent != var and potential_parent in equation:
+                    children[potential_parent].append(var)
+        return children
 
     def parse_equations(self, equations):
         """

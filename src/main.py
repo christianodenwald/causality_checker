@@ -469,23 +469,20 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             raise ValueError(f"Cause variable {cause_variable} is not in the vignette.")
     if effect_variable not in vignette.variables:
         raise ValueError(f"Effect variable {effect_variable} is not in the vignette.")
-    
-    # AC1
-    # Check all cause variables match their expected values in the example
-    for cause_variable, cause_value in zip(cause_variables, cause_values):
-        if vignette.values_in_example.get(cause_variable) != cause_value:
-            return EvaluationResult(
-                v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
-                result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
-                details=f"AC1 violated: cause {cause_variable} actual={vignette.values_in_example.get(cause_variable)} != {cause_value}"
-            )
 
-    if vignette.values_in_example.get(effect_variable) != effect_value:
-        return EvaluationResult(
-            v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
-            result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
-            details=f"AC1 violated: effect actual={vignette.values_in_example.get(effect_variable)} != {effect_value}"
+    def _subset_is_cause(subset_vars: List[str], subset_vals: List[int]) -> bool:
+        subset_cause_str = ' and '.join(
+            [f"{var}={val}" for var, val in zip(subset_vars, subset_vals)]
         )
+        subset_query = Query(
+            v_id=query.v_id,
+            cause=subset_cause_str,
+            effect=query.effect,
+            effect_contrast=query.effect_contrast,
+            query_id=f"{qid}_subset"
+        )
+        subset_result = check_causality(theory, vignette, subset_query, gt=gt)
+        return bool(subset_result.result)
 
     evaluator = THEORY_EVALUATORS.get(theory)
     if evaluator is None:
@@ -507,6 +504,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             qid=qid,
             normality=normality,
             setting_is_at_least_as_normal=setting_is_at_least_as_normal,
+            subset_is_cause=_subset_is_cause,
         )
     else:
         theory_eval = evaluator(
@@ -516,6 +514,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             cause_values=cause_values,
             effect_variable=effect_variable,
             effect_value=effect_value,
+            subset_is_cause=_subset_is_cause,
         )
 
     if theory_eval.get('terminal'):
@@ -536,35 +535,6 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
     evaluation_result = theory_eval.get('result')
     witness_str = theory_eval.get('witness')
     theory_details = theory_eval.get('details')
-
-    # AC3: Check minimality - no proper subset of cause variables is itself a cause
-    # This applies to both HP2015 and HP2005
-    if evaluation_result and len(cause_variables) > 1:
-        # Check all proper subsets
-        for r in range(1, len(cause_variables)):
-            for subset_indices in itertools.combinations(range(len(cause_variables)), r):
-                subset_vars = [cause_variables[i] for i in subset_indices]
-                subset_vals = [cause_values[i] for i in subset_indices]
-                
-                # Create a Query object for this subset
-                subset_cause_str = ' and '.join([f"{var}={val}" for var, val in zip(subset_vars, subset_vals)])
-                subset_query = Query(
-                    v_id=query.v_id,
-                    cause=subset_cause_str,
-                    effect=query.effect,
-                    effect_contrast=query.effect_contrast,
-                    query_id=f"{qid}_subset"
-                )
-                
-                # Recursively check if this subset is a cause
-                subset_result = check_causality(theory, vignette, subset_query, gt=gt)
-                if subset_result.result:
-                    # A proper subset is also a cause, so AC3 is violated
-                    return EvaluationResult(
-                        v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
-                        result=False, witness=None, gt_label=gt, groundtruth=query.groundtruth.get(gt),
-                        details=f"AC3 violated: proper subset {subset_cause_str} is also a cause"
-                    )
 
     return EvaluationResult(
         v_id=query.v_id, query_id=qid, cause=query.cause, effect=query.effect, effect_contrast=query.effect_contrast, theory=theory,
@@ -593,7 +563,8 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], t
                 print(f"Warning: vignette {query.v_id} not found. Skipping.")
             continue
 
-        print(f"Evaluating query {i+1}/{len(queries)}: vignette={query.v_id}, cause={query.cause}, effect={query.effect}, effect_contrast={query.effect_contrast}")
+        if verbose:
+            print(f"Evaluating query {i+1}/{len(queries)}: vignette={query.v_id}, cause={query.cause}, effect={query.effect}, effect_contrast={query.effect_contrast}")
         res = check_causality(theory, vignettes[query.v_id], query, gt=gt)
         _format_and_print_result(res, vignette_title=vignettes[query.v_id].title if query.v_id in vignettes else None, verbose=verbose)
         records.append(asdict(res))

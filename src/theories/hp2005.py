@@ -1,6 +1,8 @@
 import itertools
 from typing import Any, Callable, Dict, List, Optional
 
+from .ac_conditions import check_ac1, check_ac3
+
 
 def _powerset(iterable):
     s = list(iterable)
@@ -17,8 +19,24 @@ def evaluate_hp2005(
     qid: Optional[str],
     normality: bool,
     setting_is_at_least_as_normal: Callable[[Any, Dict[str, int]], bool],
+    subset_is_cause: Callable[[List[str], List[int]], bool],
 ) -> Dict[str, Any]:
     """Evaluate HP2005 AC2a/AC2b search for a parsed query."""
+    ac1_violation = check_ac1(
+        vignette=vignette,
+        cause_variables=cause_variables,
+        cause_values=cause_values,
+        effect_variable=effect_variable,
+        effect_value=effect_value,
+    )
+    if ac1_violation:
+        return {
+            "terminal": True,
+            "result": False,
+            "witness": None,
+            "details": ac1_violation,
+        }
+
     if qid == "rock_bottle_noisy_q107":
         return {
             "terminal": True,
@@ -92,6 +110,20 @@ def evaluate_hp2005(
                 break
         if evaluation_result:
             break
+
+    if evaluation_result:
+        ac3_violation = check_ac3(
+            cause_variables=cause_variables,
+            cause_values=cause_values,
+            subset_is_cause=subset_is_cause,
+        )
+        if ac3_violation:
+            return {
+                "terminal": True,
+                "result": False,
+                "witness": None,
+                "details": ac3_violation,
+            }
 
     return {
         "terminal": False,

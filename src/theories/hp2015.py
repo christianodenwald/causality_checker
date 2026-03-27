@@ -1,5 +1,7 @@
 import itertools
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
+
+from .ac_conditions import check_ac1, check_ac3
 
 
 def _powerset(iterable):
@@ -14,8 +16,24 @@ def evaluate_hp2015(
     cause_values: List[int],
     effect_variable: str,
     effect_value: int,
+    subset_is_cause: Callable[[List[str], List[int]], bool],
 ) -> Dict[str, Any]:
     """Evaluate HP2015 AC2-style search for a parsed query."""
+    ac1_violation = check_ac1(
+        vignette=vignette,
+        cause_variables=cause_variables,
+        cause_values=cause_values,
+        effect_variable=effect_variable,
+        effect_value=effect_value,
+    )
+    if ac1_violation:
+        return {
+            "terminal": True,
+            "result": False,
+            "witness": None,
+            "details": ac1_violation,
+        }
+
     cause_alternatives = []
     for cause_variable, cause_value in zip(cause_variables, cause_values):
         alternatives = [val for val in vignette.ranges[cause_variable] if val != cause_value]
@@ -55,6 +73,20 @@ def evaluate_hp2015(
 
         if evaluation_result:
             break
+
+    if evaluation_result:
+        ac3_violation = check_ac3(
+            cause_variables=cause_variables,
+            cause_values=cause_values,
+            subset_is_cause=subset_is_cause,
+        )
+        if ac3_violation:
+            return {
+                "terminal": True,
+                "result": False,
+                "witness": None,
+                "details": ac3_violation,
+            }
 
     return {
         "terminal": False,

@@ -251,8 +251,14 @@ class EvaluationResult:
 
 #### FUNCTIONS
 
-def load_vignettes(vignettes_csv_path, variables_csv_path):
-    """Loads vignettes from a CSV file."""
+def load_vignettes(vignettes_csv_path, variables_csv_path, filter_nl: bool = False):
+    """Loads vignettes from a CSV file.
+
+    Args:
+        vignettes_csv_path: Path to the vignette metadata CSV.
+        variables_csv_path: Path to the variables CSV.
+        filter_nl: When True, remove vignettes with missing/blank vignette_text.
+    """
 
     vignettes_df = pd.read_csv(vignettes_csv_path)
     for col in ['variable_order', 'context']:
@@ -342,7 +348,21 @@ def load_vignettes(vignettes_csv_path, variables_csv_path):
                 equations=equations,
                 # values_in_example=values_in_example,
             )
-    print(f"Loaded {len(vignettes)} vignettes.")
+    total_vignettes = len(vignettes)
+    if filter_nl:
+        filtered_vignettes = {
+            v_id: vignette
+            for v_id, vignette in vignettes.items()
+            if vignette.vignette_text and vignette.vignette_text.strip()
+        }
+        filtered_out = total_vignettes - len(filtered_vignettes)
+        print(
+            f"Loaded {len(filtered_vignettes)} vignettes "
+            f"(filtered out {filtered_out} missing/blank vignette_text entries)."
+        )
+        return filtered_vignettes
+
+    print(f"Loaded {total_vignettes} vignettes.")
     return vignettes
 
 # Function to create Query objects from CSV file
@@ -587,9 +607,16 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
 
 ### EVALUATION FUNCTIONS
 
-def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], theory: str = 'HP2015',
-                         gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = False, save: bool = False,
-                         result_scope: str = 'all') -> pd.DataFrame:
+def evaluate_all_queries(vignettes: Dict[str, Vignette], 
+                         queries: List[Query], 
+                         theory: str = 'HP2015',
+                         gt: str = 'intuition', 
+                         skip: Optional[List[str]] = None, 
+                         verbose: bool = False, 
+                         save: bool = False,
+                         normality: bool = False,
+                         result_scope: str = 'all',
+                         filter_nl: bool = False) -> pd.DataFrame:
     """
     Evaluate many queries, collect structured results, and optionally print per-query output.
     Returns a DataFrame with results.
@@ -627,7 +654,8 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], t
             'nonpaper': 'non_paper_queries',
         }
         suffix = scope_suffix_map.get(result_scope, result_scope)
-        out_path = OUTPUT_DIR / f'causality_results_{theory}_{gt}_{suffix}.csv'
+        filter_suffix = '_filter_nl' if filter_nl else ''
+        out_path = OUTPUT_DIR / f'causality_results_{theory}_{gt}_{suffix}{filter_suffix}.csv'
         df.to_csv(out_path, index=False)
         print(f"Results saved to {out_path}")
 
@@ -636,7 +664,8 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette], queries: List[Query], t
 def reproduce_paper_results(vignettes: Dict[str, Vignette], queries: List[Query],
                             query_list: Optional[List[str]] = None, theory: str = 'HP2005',
                             gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = False,
-                            save: bool = False) -> pd.DataFrame:
+                            save: bool = False,
+                            filter_nl: bool = False) -> pd.DataFrame:
     """
     Filter `queries` to those in `query_list` (if provided) and call evaluate_all_queries.
     Returns a DataFrame of results for the selected queries.
@@ -653,13 +682,15 @@ def reproduce_paper_results(vignettes: Dict[str, Vignette], queries: List[Query]
         skip=skip,
         verbose=verbose,
         save=save,
-        result_scope='paper'
+        result_scope='paper',
+        filter_nl=filter_nl,
     )
 
 def evaluate_non_paper_queries(vignettes: Dict[str, Vignette], queries: List[Query],
                               query_list: Optional[List[str]] = None, theory: str = 'HP2005',
                               gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = False,
-                              save: bool = False) -> pd.DataFrame:
+                              save: bool = False,
+                              filter_nl: bool = False) -> pd.DataFrame:
     """
     Filter `queries` to those NOT in `query_list` (if provided) and call evaluate_all_queries.
     Returns a DataFrame of results for the selected queries.
@@ -676,7 +707,8 @@ def evaluate_non_paper_queries(vignettes: Dict[str, Vignette], queries: List[Que
         skip=skip,
         verbose=verbose,
         save=save,
-        result_scope='nonpaper'
+        result_scope='nonpaper',
+        filter_nl=filter_nl,
     )
 
 
@@ -707,7 +739,8 @@ def run_single_query(vignettes: Dict[str, Vignette], queries: List[Query], query
 
 
 if __name__ == "__main__":
-    vignettes = load_vignettes(vignettes_path, variables_path)
+    vignettes = load_vignettes(vignettes_path, variables_path, filter_nl=True)
+    # vignettes = load_vignettes(vignettes_path, variables_path)
     queries = load_queries(queries_path)
     # check_causality('HP2005', vignettes['ff_disj'], queries[0]) # test call for single query
     skip = ['rock_bottle_noisy', 'rock_bottle_time']
@@ -732,7 +765,7 @@ if __name__ == "__main__":
     # result = run_single_query(vignettes, queries, query_id='rock_bottle_noisy_q107', theory='HP2005', gt='HP05', verbose=True)
 
     # evaluate all queries
-    all_HP2005 = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', verbose=False, skip=skip, save=True)
+    # all_HP2005 = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', verbose=False, skip=skip, save=True)
     # all_HP2015 = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', verbose=False, skip=skip, save=True)
     # nonpaper_HP2005 = evaluate_non_paper_queries(vignettes, queries, query_list=HP2005_examples, theory='HP2005', gt='intuition', verbose=False, skip=skip, save=True)
     # nonpaper_HP2015 = evaluate_non_paper_queries(vignettes, queries, query_list=HP2015_examples, theory='HP2015', gt='intuition', verbose=False, skip=skip, save=True)
@@ -740,5 +773,11 @@ if __name__ == "__main__":
     # find queries with disagreements
     # disagreements_HP2005 = all_HP2005[all_HP2005['agreement'] == False]
     # disagreements_HP2015 = all_HP2015[all_HP2015['agreement'] == False]
+
+    # revisions
+    HP2005 = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip, save=True)
+    HP2015 = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip=skip, save=True)
+    HP2005_norm = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip, save=True, normality=True)
+    HP2015_norm = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip=skip, save=True, normality=True)
 
 print()

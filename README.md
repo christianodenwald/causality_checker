@@ -61,6 +61,29 @@ Provider selection is inferred from `model`:
 - `data/VERSION.md`: manual data version and change log
 - `outputs/`: evaluation results saved as `causality_results_{theory/model}_{gt}_{scope}.csv`
 
+## Add New Vignettes
+
+Use the JSON template in `data/new_vignettes_template.json` to add one or more new vignettes with their variables and queries.
+For detailed field-by-field instructions and expected variable values, see `data/JSON_VIGNETTE_GUIDE.md`.
+
+1. Fill out `data/new_vignettes_template.json` (or copy it to a new JSON file).
+2. Validate without writing files:
+
+```bash
+python tools/add_vignettes_from_json.py --json data/new_vignettes_template.json --dry-run
+```
+
+3. If validation succeeds, write the rows into the CSVs:
+
+```bash
+python tools/add_vignettes_from_json.py --json data/new_vignettes_template.json
+```
+
+This appends entries to:
+- `data/vignettes.csv`
+- `data/variables.csv`
+- `data/queries.csv`
+
 <!-- ## Citation
 
 Please cite the accompanying paper when using this code or dataset. -->

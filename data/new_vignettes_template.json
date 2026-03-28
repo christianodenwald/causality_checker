@@ -1,0 +1,81 @@
+{
+  "vignettes": [
+    {
+      "v_id": "new_vignette_id",
+      "se_id": "new_setting_id",
+      "title": "Short title for the vignette",
+      "vignette_text": "Describe the vignette in natural language.",
+      "variable_order": ["A", "B", "E"],
+      "context": [1, 0],
+      "metadata": {
+        "other_names": "",
+        "description": "",
+        "origin": "",
+        "taken_from": "",
+        "equivalent_to": "",
+        "other_models": "",
+        "similar": "",
+        "notes": ""
+      },
+      "variables": [
+        {
+          "variable_name": "A",
+          "var_description": "Agent acts",
+          "range": [0, 1],
+          "default_values": 0,
+          "deviant_values": 1,
+          "structural_equation": ""
+        },
+        {
+          "variable_name": "B",
+          "var_description": "Background factor",
+          "range": [0, 1],
+          "default_values": 0,
+          "deviant_values": 1,
+          "structural_equation": ""
+        },
+        {
+          "variable_name": "E",
+          "var_description": "Effect",
+          "range": [0, 1],
+          "default_values": 0,
+          "deviant_values": 1,
+          "structural_equation": "A and B"
+        }
+      ],
+      "queries": [
+        {
+          "cause": "A=1",
+          "cause_contrast": "",
+          "effect": "E=1",
+          "effect_contrast": "",
+          "query_text": "Does A=1 cause E=1?",
+          "core_query": 1,
+          "intuition": 1,
+          "intuition_source": "",
+          "notes": "",
+          "HP01": "",
+          "HP01_source": "",
+          "HP05": "",
+          "HP05_source": "",
+          "HP15": "",
+          "HP15_source": "",
+          "H01": "",
+          "H01_source": "",
+          "H07": "",
+          "H07_source": "",
+          "Hall": "",
+          "Hall_source": "",
+          "Baumgartner13": "",
+          "Baumgartner_source": "",
+          "AG24": "",
+          "AG24_source": "",
+          "G21": "",
+          "G21_source": "",
+          "BV18": "",
+          "BV18_source": ""
+        }
+      ]
+    }
+  ]
+}

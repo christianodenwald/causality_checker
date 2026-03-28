@@ -1,6 +1,6 @@
 import itertools
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
@@ -93,6 +93,83 @@ def add_confusion_matrix_columns(df: pd.DataFrame) -> pd.DataFrame:
         out['FN'] = pd.NA
 
     return out
+
+
+def load_other_models_group_map(vignettes_csv_path: Optional[Path] = None) -> Dict[str, str]:
+    """Load mapping from vignette id to its model-group key based on `other_models`."""
+    csv_path = vignettes_csv_path or resolve_data_path('vignettes.csv')
+    vignettes_df = pd.read_csv(csv_path, usecols=['v_id', 'other_models'])
+
+    group_map: Dict[str, str] = {}
+    for _, row in vignettes_df.iterrows():
+        v_id = str(row['v_id']).strip()
+        other_models = row.get('other_models')
+        if pd.notna(other_models) and str(other_models).strip() != '':
+            group_map[v_id] = str(other_models).strip()
+        else:
+            group_map[v_id] = v_id
+
+    return group_map
+
+
+def select_single_model_per_group(df: pd.DataFrame, model_group_map: Dict[str, str]) -> pd.DataFrame:
+    """Select one model per `other_models` group and keep only its query rows.
+
+    Selection is done at whole-model level (not per-query) to avoid mixing answers from
+    different models inside one group.
+    """
+    required_cols = {'v_id', 'result', 'groundtruth'}
+    if not required_cols.issubset(df.columns):
+        return df.copy()
+
+    out = df.copy()
+    out['model_group'] = out['v_id'].astype(str).map(model_group_map)
+    out['model_group'] = out['model_group'].where(
+        out['model_group'].notna() & (out['model_group'].astype(str).str.strip() != ''),
+        out['v_id'].astype(str),
+    )
+
+    group_cols = ['model_group', 'cause', 'effect', 'effect_contrast', 'gt_label', 'groundtruth']
+    for col in group_cols:
+        if col not in out.columns:
+            out[col] = pd.NA
+
+    selected_frames: List[pd.DataFrame] = []
+    grouped_by_model_group = out.groupby('model_group', dropna=False, sort=False)
+
+    for model_group, group_df in grouped_by_model_group:
+        model_ids = [str(v) for v in pd.unique(group_df['v_id'])]
+        if not model_ids:
+            continue
+
+        ranked: List[tuple] = []
+        for model_id in model_ids:
+            model_df = group_df[group_df['v_id'] == model_id]
+            pred_series = pd.to_numeric(model_df['result'], errors='coerce')
+            gt_series = pd.to_numeric(model_df['groundtruth'], errors='coerce')
+
+            valid = pred_series.isin([0, 1]) & gt_series.isin([0, 1])
+            valid_count = int(valid.sum())
+            correct_count = int((pred_series[valid].astype(int) == gt_series[valid].astype(int)).sum())
+            all_correct = (valid_count > 0) and (correct_count == valid_count)
+
+            # Prefer models that are fully correct; then highest number correct, then more valid rows,
+            # then stable lexical tiebreak on model id.
+            ranked.append((all_correct, correct_count, valid_count, model_id))
+
+        ranked.sort(key=lambda x: (x[0], x[1], x[2], x[3]), reverse=True)
+        selected_model_id = ranked[0][3]
+
+        chosen = group_df[group_df['v_id'] == selected_model_id].copy()
+        chosen['v_id'] = str(model_group)
+        selected_frames.append(chosen)
+
+    if not selected_frames:
+        return out.iloc[0:0].copy()
+
+    selected_df = pd.concat(selected_frames, axis=0, ignore_index=True)
+    selected_df = selected_df.drop(columns=['model_group'], errors='ignore').reset_index(drop=True)
+    return selected_df
 
 
 def print_confusion_matrix_and_f1(df: pd.DataFrame, label: Optional[str] = None) -> None:

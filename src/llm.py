@@ -10,9 +10,21 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 
 try:
-    from src.helpers import add_confusion_matrix_columns, _format_and_print_result, print_confusion_matrix_and_f1
+    from src.helpers import (
+        add_confusion_matrix_columns,
+        _format_and_print_result,
+        print_confusion_matrix_and_f1,
+        load_other_models_group_map,
+        select_single_model_per_group,
+    )
 except ModuleNotFoundError:
-    from helpers import add_confusion_matrix_columns, _format_and_print_result, print_confusion_matrix_and_f1
+    from helpers import (
+        add_confusion_matrix_columns,
+        _format_and_print_result,
+        print_confusion_matrix_and_f1,
+        load_other_models_group_map,
+        select_single_model_per_group,
+    )
 
 from main import (
     OUTPUT_DIR,
@@ -364,8 +376,10 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
     else:
         df['agreement'] = pd.NA
 
+    model_group_map = load_other_models_group_map()
+    df = select_single_model_per_group(df, model_group_map)
     df = add_confusion_matrix_columns(df)
-    print_confusion_matrix_and_f1(df, label=f"{model} ({gt}, {result_scope}, {prompt_mode})")
+    print_confusion_matrix_and_f1(df, label=f"{model} ({gt}, {result_scope}, {prompt_mode}, single-model-group)")
 
     if save:
         scope_suffix_map = {

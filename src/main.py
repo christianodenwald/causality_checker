@@ -22,7 +22,9 @@ try:
         powerset,
         _format_and_print_result,
         add_confusion_matrix_columns,
+        load_other_models_group_map,
         print_confusion_matrix_and_f1,
+        select_single_model_per_group,
         setting_is_at_least_as_normal,
         get_query_by_id,
     )
@@ -33,7 +35,9 @@ except ModuleNotFoundError:
         powerset,
         _format_and_print_result,
         add_confusion_matrix_columns,
+        load_other_models_group_map,
         print_confusion_matrix_and_f1,
+        select_single_model_per_group,
         setting_is_at_least_as_normal,
         get_query_by_id,
     )
@@ -572,8 +576,10 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette],
     if 'effect_contrast' in df.columns:
         df['effect_contrast'] = pd.to_numeric(df['effect_contrast'], errors='coerce').astype('Int64')
 
+    model_group_map = load_other_models_group_map()
+    df = select_single_model_per_group(df, model_group_map)
     df = add_confusion_matrix_columns(df)
-    print_confusion_matrix_and_f1(df, label=f"{theory} ({gt}, {result_scope})")
+    print_confusion_matrix_and_f1(df, label=f"{theory} ({gt}, {result_scope}, single-model-group)")
 
     if save:
         scope_suffix_map = {

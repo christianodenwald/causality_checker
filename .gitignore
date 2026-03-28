@@ -8,3 +8,4 @@ paper/
 src/*.py
 !src/main.py
 !src/results.py
+!src/helpers.py

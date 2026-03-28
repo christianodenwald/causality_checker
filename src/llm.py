@@ -9,13 +9,16 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
+try:
+    from src.helpers import add_confusion_matrix_columns, _format_and_print_result
+except ModuleNotFoundError:
+    from helpers import add_confusion_matrix_columns, _format_and_print_result
+
 from main import (
     OUTPUT_DIR,
     EvaluationResult,
     Query,
     Vignette,
-    add_confusion_matrix_columns,
-    _format_and_print_result,
     load_queries,
     load_vignettes,
     queries_path,

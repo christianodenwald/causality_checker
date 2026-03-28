@@ -1,11 +1,13 @@
 from pathlib import Path
+from datetime import datetime
 
 import pandas as pd
 
 
 CM_COLS = ["TP", "TN", "FP", "FN"]
 
-OUTPUT_DIR = Path("outputs/pre-subm/")
+DEFAULT_INPUT_DIR = Path("outputs/")
+DEFAULT_OUTPUT_ROOT = Path("outputs/analysis")
 
 
 def short_name(path: Path) -> str:
@@ -65,25 +67,184 @@ def summarize_file(path: Path) -> dict:
     }
 
 
-def main() -> None:
-    files = [
-        Path(OUTPUT_DIR / "causality_results_HP2005_intuition_all_queries.csv"),
-        Path(OUTPUT_DIR / "causality_results_HP2015_intuition_all_queries.csv"),
-        Path(OUTPUT_DIR / "causality_results_llama3.2_intuition_all_queries.csv"),
-        # Path(OUTPUT_DIR / "causality_results_llama3.2_cot_intuition_all_queries.csv"),
-        Path(OUTPUT_DIR / "causality_results_ministral-3_intuition_all_queries.csv"),
-        Path(OUTPUT_DIR / "causality_results_ministral-3_cot_intuition_all_queries.csv"),
-        Path(OUTPUT_DIR / "causality_results_gemma3_intuition_all_queries.csv"),
-        Path(OUTPUT_DIR / "causality_results_gemma3_cot_intuition_all_queries.csv")
-    ]
-    save_path = None  # e.g. Path("outputs/results_summary_metrics.csv")
+def ensure_output_dirs(root: Path) -> tuple[Path, Path]:
+    summaries_dir = root / "summaries"
+    charts_dir = root / "charts"
+    summaries_dir.mkdir(parents=True, exist_ok=True)
+    charts_dir.mkdir(parents=True, exist_ok=True)
+    return summaries_dir, charts_dir
+
+
+def save_performance_chart(summary: pd.DataFrame, charts_dir: Path, stamp: str) -> None:
+    try:
+        import matplotlib.pyplot as plt  # type: ignore[reportMissingImports]
+    except ImportError:
+        print("Skipping chart generation: matplotlib is not installed.")
+        print("Install it with: pip install matplotlib")
+        return
+
+    summary_sorted = summary.sort_values("accuracy", ascending=False)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.bar(summary_sorted["file"], summary_sorted["accuracy"], label="accuracy")
+    ax.bar(summary_sorted["file"], summary_sorted["F1"], alpha=0.7, label="F1")
+    ax.set_ylim(0, 1.0)
+    ax.set_ylabel("score")
+    ax.set_title("Model performance")
+    ax.tick_params(axis="x", rotation=35)
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(str(charts_dir / f"performance_accuracy_f1_{stamp}.png"), dpi=180)
+    fig.savefig(str(charts_dir / "performance_accuracy_f1_latest.png"), dpi=180)
+    plt.close(fig)
+
+
+def save_confusion_chart(summary: pd.DataFrame, charts_dir: Path, stamp: str) -> None:
+    try:
+        import matplotlib.pyplot as plt  # type: ignore[reportMissingImports]
+    except ImportError:
+        print("Skipping chart generation: matplotlib is not installed.")
+        print("Install it with: pip install matplotlib")
+        return
+
+    summary_sorted = summary.sort_values("accuracy", ascending=False)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    x = range(len(summary_sorted))
+    ax.bar(x, summary_sorted["TP"], label="TP")
+    ax.bar(x, summary_sorted["TN"], bottom=summary_sorted["TP"], label="TN")
+    ax.bar(
+        x,
+        summary_sorted["FP"],
+        bottom=summary_sorted["TP"] + summary_sorted["TN"],
+        label="FP",
+    )
+    ax.bar(
+        x,
+        summary_sorted["FN"],
+        bottom=summary_sorted["TP"] + summary_sorted["TN"] + summary_sorted["FP"],
+        label="FN",
+    )
+    ax.set_xticks(list(x), summary_sorted["file"], rotation=35, ha="right")
+    ax.set_ylabel("count")
+    ax.set_title("Confusion matrix totals")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(str(charts_dir / f"confusion_totals_{stamp}.png"), dpi=180)
+    fig.savefig(str(charts_dir / "confusion_totals_latest.png"), dpi=180)
+    plt.close(fig)
+
+
+def save_f1_grouped_chart(summary: pd.DataFrame, charts_dir: Path, stamp: str) -> None:
+    try:
+        import matplotlib.pyplot as plt  # type: ignore[reportMissingImports]
+    except ImportError:
+        print("Skipping chart generation: matplotlib is not installed.")
+        print("Install it with: pip install matplotlib")
+        return
+
+    # Group prompt variants per base model and plot F1 only.
+    f1_df = summary[["file", "F1"]].copy()
+
+    def split_model_variant(name: str) -> tuple[str, str]:
+        if name.endswith("_few_shot"):
+            return name[: -len("_few_shot")], "few_shot"
+        if name.endswith("_cot"):
+            return name[: -len("_cot")], "cot"
+        return name, "zero_shot"
+
+    parsed = f1_df["file"].map(split_model_variant)
+    f1_df["model"] = parsed.map(lambda x: x[0])
+    f1_df["variant"] = parsed.map(lambda x: x[1])
+
+    variant_order = ["zero_shot", "few_shot", "cot"]
+    variant_labels = {"zero_shot": "zero", "few_shot": "few", "cot": "cot"}
+    pivot = (
+        f1_df.pivot_table(index="model", columns="variant", values="F1", aggfunc="first")
+        .reindex(columns=variant_order)
+        .fillna(0.0)
+    )
+
+    preferred_prefix_order = {"llama": 0, "ministral": 1, "gemma": 2, "gpt": 3}
+
+    def model_sort_key(model_name: str) -> tuple[int, str]:
+        lowered = model_name.lower()
+        for prefix, rank in preferred_prefix_order.items():
+            if lowered.startswith(prefix):
+                return rank, lowered
+        return 99, lowered
+
+    model_order = sorted(pivot.index.tolist(), key=model_sort_key)
+
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+    width = 0.24
+    x = list(range(len(model_order)))
+
+    for idx, variant in enumerate(variant_order):
+        vals = pd.to_numeric(pivot.loc[model_order, variant], errors="coerce").tolist()
+        offsets = [v + (idx - 1) * width for v in x]
+        ax.bar(offsets, vals, width=width, label=variant_labels[variant])
+
+    ax.set_xticks(x, model_order)
+    ax.set_ylim(0, 1.0)
+    ax.set_ylabel("F1")
+    ax.set_title("F1 by model")
+    ax.legend(title="mode")
+    fig.tight_layout()
+    fig.savefig(str(charts_dir / f"f1_grouped_by_model_{stamp}.png"), dpi=180)
+    fig.savefig(str(charts_dir / "f1_grouped_by_model_latest.png"), dpi=180)
+    plt.close(fig)
+
+
+def save_selected_chart(summary: pd.DataFrame, charts_dir: Path, stamp: str, chart: str) -> None:
+    if chart == "performance":
+        save_performance_chart(summary, charts_dir, stamp)
+        print("Saved chart: performance_accuracy_f1")
+    elif chart == "confusion":
+        save_confusion_chart(summary, charts_dir, stamp)
+        print("Saved chart: confusion_totals")
+    elif chart == "f1":
+        save_f1_grouped_chart(summary, charts_dir, stamp)
+        print("Saved chart: f1_grouped_by_model")
+
+
+def build_summary(
+    input_dir: Path = DEFAULT_INPUT_DIR,
+    pattern: str = "causality_results_*_intuition_all_queries.csv",
+) -> pd.DataFrame:
+    files = sorted(input_dir.glob(pattern))
+    if not files:
+        raise FileNotFoundError(
+            f"No files found in {input_dir} matching pattern {pattern}."
+        )
 
     rows = [summarize_file(p) for p in files]
     summary = pd.DataFrame(rows)
-    print(summary.to_string(index=False))
-    if save_path:
-        summary.to_csv(save_path, index=False)
+    return summary
+
+
+def save_summary(summary: pd.DataFrame, summaries_dir: Path, stamp: str) -> None:
+    stamped_summary = summaries_dir / f"results_summary_metrics_{stamp}.csv"
+    latest_summary = summaries_dir / "results_summary_metrics_latest.csv"
+    summary.to_csv(stamped_summary, index=False)
+    summary.to_csv(latest_summary, index=False)
+    print(f"Saved summary: {stamped_summary}")
+    print(f"Updated latest summary: {latest_summary}")
 
 
 if __name__ == "__main__":
-    main()
+    input_dir = DEFAULT_INPUT_DIR
+    pattern = "causality_results_*_intuition_all_queries.csv"
+    output_root = DEFAULT_OUTPUT_ROOT
+
+    summary = build_summary(input_dir=input_dir, pattern=pattern)
+    print(summary.to_string(index=False))
+
+    summaries_dir, charts_dir = ensure_output_dirs(output_root)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Toggle one of these as needed:
+    save_summary(summary, summaries_dir, stamp)
+    # save_selected_chart(summary, charts_dir, stamp, chart="f1")
+    # save_selected_chart(summary, charts_dir, stamp, chart="performance")
+    # save_selected_chart(summary, charts_dir, stamp, chart="confusion")

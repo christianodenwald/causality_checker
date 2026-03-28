@@ -58,6 +58,7 @@ Provider selection is inferred from `model`:
 - `data/vignettes.csv`: vignettes with natural language text, variables, and context values
 - `data/variables.csv`: structural equations and ranges per variable
 - `data/queries.csv`: cause-effect queries with ground-truth labels (intuition, HP05, HP15, etc.)
+- `data/VERSION.md`: manual data version and change log
 - `outputs/`: evaluation results saved as `causality_results_{theory/model}_{gt}_{scope}.csv`
 
 <!-- ## Citation

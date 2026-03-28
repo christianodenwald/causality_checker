@@ -10,9 +10,9 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 
 try:
-    from src.helpers import add_confusion_matrix_columns, _format_and_print_result
+    from src.helpers import add_confusion_matrix_columns, _format_and_print_result, print_confusion_matrix_and_f1
 except ModuleNotFoundError:
-    from helpers import add_confusion_matrix_columns, _format_and_print_result
+    from helpers import add_confusion_matrix_columns, _format_and_print_result, print_confusion_matrix_and_f1
 
 from main import (
     OUTPUT_DIR,
@@ -365,6 +365,7 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
         df['agreement'] = pd.NA
 
     df = add_confusion_matrix_columns(df)
+    print_confusion_matrix_and_f1(df, label=f"{model} ({gt}, {result_scope}, {prompt_mode})")
 
     if save:
         scope_suffix_map = {

@@ -22,6 +22,7 @@ try:
         powerset,
         _format_and_print_result,
         add_confusion_matrix_columns,
+        print_confusion_matrix_and_f1,
         setting_is_at_least_as_normal,
         get_query_by_id,
     )
@@ -32,6 +33,7 @@ except ModuleNotFoundError:
         powerset,
         _format_and_print_result,
         add_confusion_matrix_columns,
+        print_confusion_matrix_and_f1,
         setting_is_at_least_as_normal,
         get_query_by_id,
     )
@@ -571,6 +573,7 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette],
         df['effect_contrast'] = pd.to_numeric(df['effect_contrast'], errors='coerce').astype('Int64')
 
     df = add_confusion_matrix_columns(df)
+    print_confusion_matrix_and_f1(df, label=f"{theory} ({gt}, {result_scope})")
 
     if save:
         scope_suffix_map = {
@@ -656,8 +659,8 @@ def run_single_query(vignettes: Dict[str, Vignette], queries: List[Query], query
 
 
 if __name__ == "__main__":
-    vignettes = load_vignettes(vignettes_path, variables_path, filter_nl=True)
-    # vignettes = load_vignettes(vignettes_path, variables_path)
+    # vignettes = load_vignettes(vignettes_path, variables_path, filter_nl=True)
+    vignettes = load_vignettes(vignettes_path, variables_path)
     queries = load_queries(queries_path)
     # check_causality('HP2005', vignettes['ff_disj'], queries[0]) # test call for single query
     skip = ['rock_bottle_noisy', 'rock_bottle_time']

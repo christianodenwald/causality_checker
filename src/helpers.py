@@ -95,6 +95,38 @@ def add_confusion_matrix_columns(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def print_confusion_matrix_and_f1(df: pd.DataFrame, label: Optional[str] = None) -> None:
+    """Print confusion-matrix totals and F1 based on TP/TN/FP/FN columns."""
+    missing_cols = [col for col in ('TP', 'TN', 'FP', 'FN') if col not in df.columns]
+    if missing_cols:
+        print(f"Cannot compute confusion matrix: missing column(s): {', '.join(missing_cols)}")
+        return
+
+    cm = df[['TP', 'TN', 'FP', 'FN']].apply(pd.to_numeric, errors='coerce')
+    valid = cm.notna().all(axis=1)
+    if not valid.any():
+        prefix = f"{label} | " if label else ''
+        print(f"{prefix}Confusion matrix/F1 unavailable: no rows with valid TP/TN/FP/FN.")
+        return
+
+    tp = int(cm.loc[valid, 'TP'].sum())
+    tn = int(cm.loc[valid, 'TN'].sum())
+    fp = int(cm.loc[valid, 'FP'].sum())
+    fn = int(cm.loc[valid, 'FN'].sum())
+    total_true = tp + tn
+    total_false = fp + fn
+
+    precision = tp / (tp + fp) if (tp + fp) else 0.0
+    recall = tp / (tp + fn) if (tp + fn) else 0.0
+    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+
+    header = f"{label} confusion matrix and F1" if label else 'Confusion matrix and F1'
+    print(f"\n{header}:")
+    print(f"TP={tp}, TN={tn}, FP={fp}, FN={fn}")
+    print(f"Total correct={total_true}, Total incorrect={total_false}")
+    print(f"F1={f1:.4f}")
+
+
 def setting_is_at_least_as_normal(vignette: Any, w_setting: Any) -> bool:
     """Check if the setting w_setting is at least as normal as the vignette's context."""
     _ = w_setting

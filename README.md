@@ -21,7 +21,7 @@ For Ollama-based LLM evaluation: `brew install ollama && ollama pull MODEL`
 
 ## Usage
 
-**Theories of actual causation** (HP2005/HP2015):
+### Theories of actual causation (HP2005/HP2015):
 
 in ```src/main.py```:
 
@@ -37,7 +37,29 @@ result = run_single_query(vignettes, queries, query_id='rock_bottle_noisy_q111',
 
 ```
 
-**LLM evaluation** (Ollama or OpenAI):
+#### Extensions
+
+Some extensions to the "standard" SCMs are already implemented.
+In particular: normality, contrastive causes, and compound causes.
+
+##### Compound Causes
+Causes don't have to be primitive events, but they can also be conjuncts of primitive causes.
+
+##### Normality
+There are different ways of defining normality in the literature. 
+We implement "small worlds" (cf. Halpern and Hitchcock 2015). 
+This only requires default and deviant values for each exogenous variables. If these are not given, 0 is taken as default.
+
+##### Contrasts
+Some think that causes are contrastive, i.e., it is not enough to ask *"Is C=c a cause of E=e?"*, but one should rather ask *"Is C=c rather than C=c\* a cause of E=e rather than E=e\*?"*. 
+Contrastive cause and effect values can be added in `queries.csv`in the respective columns.
+
+In HP-type theories, this will result in AC2 being restricted to c'=c\* and e'=e\* (i.e., in the counterfactual, C and E have to take the specific values c\* and e\* rather than just any values that differ from the actual values c and e). 
+In the case of binary variables (which most are), every cause is automatically contrastive.
+
+
+
+### LLM evaluation (Ollama or OpenAI):
 
 in ```src/llm.py```:
 
@@ -63,7 +85,9 @@ Provider selection is inferred from `model`:
 
 ## Add New Vignettes
 
-Use the JSON template in `data/new_vignettes_template.json` to add one or more new vignettes with their variables and queries.
+One way to add a new vignette is to edit the `.csv` files in `data/*.csv`. 
+
+Another way is to use the JSON template in `data/new_vignettes_template.json`.
 For detailed field-by-field instructions and expected variable values, see `data/JSON_VIGNETTE_GUIDE.md`.
 
 1. Fill out `data/new_vignettes_template.json` (or copy it to a new JSON file).

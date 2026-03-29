@@ -269,6 +269,41 @@ def load_vignettes(vignettes_csv_path, variables_csv_path, filter_nl: bool = Fal
 
     vignettes = dict()
 
+    def _parse_default_values(raw_default: Any) -> List[int]:
+        """Parse default-values cell into a list of equally normal values."""
+        if pd.isna(raw_default):
+            return [0]
+
+        if isinstance(raw_default, (int, np.integer)):
+            return [int(raw_default)]
+
+        if isinstance(raw_default, (float, np.floating)):
+            return [int(raw_default)] if float(raw_default).is_integer() else [0]
+
+        if isinstance(raw_default, str):
+            normalized = raw_default.strip()
+            if not normalized:
+                return [0]
+
+            for delimiter in [';', '|', '/']:
+                normalized = normalized.replace(delimiter, ',')
+
+            values: List[int] = []
+            for token in normalized.split(','):
+                cleaned = token.strip()
+                if not cleaned or cleaned.lower() in {'nan', 'none'}:
+                    continue
+                try:
+                    parsed = float(cleaned)
+                except ValueError:
+                    continue
+                if parsed.is_integer():
+                    values.append(int(parsed))
+
+            return sorted(set(values)) if values else [0]
+
+        return [0]
+
 
     for j, (_, vignette_row) in enumerate(vignettes_df.iterrows()):
         variable_data = variables_df.loc[variables_df.se_id == vignette_row['se_id']]
@@ -291,23 +326,11 @@ def load_vignettes(vignettes_csv_path, variables_csv_path, filter_nl: bool = Fal
         #     # default_values[var] = variable_data.loc[variable_data['variable_name'] == var, 'default_values'].iloc[0] if any(variable_data['variable_name'] == var) else None
         #     default_values[var] = int(variable_data.loc[variable_data['variable_name'] == var, 'default_values'].iloc[0]) if variable_data.loc[variable_data['variable_name'] == var, 'default_values'].iloc[0] else np.nan
 
-        default_values = {
-            var: (
-                int(variable_data[variable_data['variable_name'] == var]['default_values'].dropna().iloc[0])
-                if (
-                        not variable_data[variable_data['variable_name'] == var]['default_values'].isna().all()
-                        and isinstance(
-                    variable_data[variable_data['variable_name'] == var]['default_values'].dropna().iloc[0],
-                    (int, float))
-                        and variable_data[variable_data['variable_name'] == var]['default_values'].dropna().iloc[
-                            0].is_integer()
-                )
-                else np.nan
-            )
-            for var in variable_data['variable_name'].unique()
-        }
-        # default value is 0 if not given
-        default_values = {var: value if not pd.isna(value) else 0 for var, value in default_values.items()}
+        default_values = {}
+        for var in variable_data['variable_name'].unique():
+            default_series = variable_data[variable_data['variable_name'] == var]['default_values']
+            raw_default = default_series.dropna().iloc[0] if not default_series.dropna().empty else np.nan
+            default_values[var] = _parse_default_values(raw_default)
 
         equations = dict()
         for index, row in variable_data.iterrows():
@@ -475,7 +498,7 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             effect_contrast=query.effect_contrast,
             query_id=f"{qid}_subset"
         )
-        subset_result = check_causality(theory, vignette, subset_query, gt=gt)
+        subset_result = check_causality(theory, vignette, subset_query, gt=gt, normality=normality)
         return bool(subset_result.result)
 
     evaluator = THEORY_EVALUATORS.get(theory)
@@ -496,6 +519,18 @@ def check_causality(theory: str, vignette: Vignette, query: Query, gt: str = 'in
             effect_variable=effect_variable,
             effect_value=effect_value,
             qid=qid,
+            normality=normality,
+            setting_is_at_least_as_normal=setting_is_at_least_as_normal,
+            subset_is_cause=_subset_is_cause,
+        )
+    elif theory == 'HP2015':
+        theory_eval = evaluator(
+            vignette=vignette,
+            query=query,
+            cause_variables=cause_variables,
+            cause_values=cause_values,
+            effect_variable=effect_variable,
+            effect_value=effect_value,
             normality=normality,
             setting_is_at_least_as_normal=setting_is_at_least_as_normal,
             subset_is_cause=_subset_is_cause,
@@ -566,7 +601,7 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette],
 
         if verbose:
             print(f"Evaluating query {i+1}/{len(queries)}: vignette={query.v_id}, cause={query.cause}, effect={query.effect}, effect_contrast={query.effect_contrast}")
-        res = check_causality(theory, vignettes[query.v_id], query, gt=gt)
+        res = check_causality(theory, vignettes[query.v_id], query, gt=gt, normality=normality)
         _format_and_print_result(res, vignette_title=vignettes[query.v_id].title if query.v_id in vignettes else None, verbose=verbose)
         records.append(asdict(res))
 

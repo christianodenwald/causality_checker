@@ -16,6 +16,8 @@ def evaluate_hp2015(
     cause_values: List[int],
     effect_variable: str,
     effect_value: int,
+    normality: bool,
+    setting_is_at_least_as_normal: Callable[[Any, Dict[str, int]], bool],
     subset_is_cause: Callable[[List[str], List[int]], bool],
 ) -> Dict[str, Any]:
     """Evaluate HP2015 AC2-style search for a parsed query."""
@@ -61,6 +63,11 @@ def evaluate_hp2015(
             for var in subset_w:
                 vignette.set_value(var, vignette.values_in_example[var])
             vignette.propagate_set_values()
+
+            if normality:
+                current_context_setting = {var: vignette.values[var] for var in vignette.context}
+                if not setting_is_at_least_as_normal(vignette, current_context_setting):
+                    continue
 
             effect_differs = vignette.values[effect_variable] != effect_value
             if query.effect_contrast is not None:

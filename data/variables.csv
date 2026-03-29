@@ -11,7 +11,7 @@ late_preemption,BT,Billy throws,"0,1",,,
 late_preemption,BH,Billy hits,"0,1",,,BT and not SH
 late_preemption,BS,Bottle shatters,"0,1",,,SH or BH
 prevention,A,Assassin puts poison in coffee,"0,1",,,
-prevention,B,Bodyguard puts antidote in coffee,"0,1",,,
+prevention,B,Bodyguard puts antidote in coffee,"0,1","0,1",,
 prevention,D,Victim dies,"0,1",,,A and not B
 loader,A,A loads,"0,1",,,
 loader,B,B shoots,"0,1",,,
@@ -27,11 +27,11 @@ ff_mechanisms,A,Mechanism A,"0,1",,,L and not MD
 ff_mechanisms,B,Mechanism B,"0,1",,,not L and MD
 ff_mechanisms,C,Mechanism C,"0,1",,,L and MD
 ff_mechanisms,FF,Forest fire ,"0,1",,,A or B or C
-campfire_vote,C,Cowboy vote,"0,1",,,
-campfire_vote,R,Ranger vote,"0,1",,,
-campfire_vote,W,Wrangler vote,"0,1",,,
-campfire_vote,H1,Hand 1 vote,"0,1",,,
-campfire_vote,H2,Hand 2 vote,"0,1",,,
+campfire_vote,C,Cowboy vote,"0,1","0,1",,
+campfire_vote,R,Ranger vote,"0,1","0,1",,
+campfire_vote,W,Wrangler vote,"0,1","0,1",,
+campfire_vote,H1,Hand 1 vote,"0,1","0,1",,
+campfire_vote,H2,Hand 2 vote,"0,1","0,1",,
 campfire_vote,O,Outcome,"0,1",,,(C and R) or (H1 and H2 and R) or (H1 and R and W) or (H2 and R and W) or (C and H1 and H2 and not W) or (C and H1 and W and not H2) or (C and H2 and W and not H1) or (R and not H1 and not H2 and not W)
 voting,A,A shoots,"0,1",,,
 voting,B,B shoots,"0,1",,,
@@ -53,8 +53,8 @@ switch3,A,Train arrives,"0,1",,,LT or RT
 dog_bite,DB,Dog bites Jim's right hand,"0,1",,,
 dog_bite,P,Jim presses the button not at all / with right hand / with left hand,"0,1,2",,,DB + 1
 dog_bite,B,Bomb detonates,"0,1",,,P >= 1
-early_preemption_iso,A,Antidote put in coffee,"0,1",,,
-early_preemption_iso,B,Buddy puts poison in coffee,"0,1",,,A
+early_preemption_iso,A,Antidote put in coffee,"0,1",1,0,
+early_preemption_iso,B,Buddy puts poison in coffee,"0,1",0,1,A
 early_preemption_iso,D,Victim dies,"0,1",,,not A and B
 voting_machine,V1,Vote 1,"0,1",,,
 voting_machine,V2,Vote 2,"0,1",,,
@@ -64,14 +64,14 @@ two_paths,A,,"0,1",,,
 two_paths,B,,"0,1",,,A
 two_paths,C,,"0,1",,,A
 two_paths,D,,"0,1",,,B or C
-default_omission,F,The Queen waters my plant,"0,1",0.0,1.0,
-default_omission,C,Plant dries up,"0,1",1.0,0.0,
+default_omission,F,Carlos waters my plant,"0,1",0.0,1.0,
+default_omission,C,Plant dries up,"0,1","0,1",,
 default_omission,E,Plant dies,"0,1",0.0,1.0,not F and C
-deviant_omission,F,Neighbor waters my plant,"0,1",1.0,0.0,
-deviant_omission,C,Plant dries up,"0,1",1.0,0.0,
+deviant_omission,F,Neighbor Billy waters the plant,"0,1",1.0,0.0,
+deviant_omission,C,Plant dries up,"0,1","0,1",,
 deviant_omission,E,Plant dies,"0,1",0.0,1.0,not F and C
-double_omission,B,Billy waters plant,"0,1",1.0,0.0,
-double_omission,P,Putin waters plant,"0,1",0.0,1.0,
+double_omission,B,Neighbor Billy waters the plant,"0,1",1.0,0.0,
+double_omission,P,Carlos waters the plant,"0,1",0.0,1.0,
 double_omission,D,Plant dies,"0,1",0.0,1.0,not B or not P
 short_circuit,F,Boulder dislodges,"0,1",,,
 short_circuit,B,Boulder threatens to hit hiker,"0,1",,,F
@@ -151,7 +151,7 @@ rock_bottle_time,H2,Bottle is hit at t2,"0,1",,,BT and not BS1
 rock_bottle_time,BS2,Bottle is shattered at t2,"0,1",,,BS1 or H2
 rock_bottle_time,H3,Bottle is hit at t3,"0,1",,,T3 and not BS2
 rock_bottle_time,BS3,Bottle is shattered at t3,"0,1",,,BS2 or H3
-monday_treatment,M,Treatment on Monday,"0,1",,,
+monday_treatment,M,Treatment on Monday,"0,1","0,1",,
 monday_treatment,B,Billy sick,"0,1",,,not M
 monday_treatment_deadly,M,Treatment on Monday,"0,1",,,
 monday_treatment_deadly,T,Treatment on Tuesday,"0,1",,,not M
@@ -183,18 +183,18 @@ prevention_overdetermination,S,Window shattered,"0,1",,,not C and not W
 shock,A,A flips switch,"0,1",,,
 shock,B,B flips switch,"0,1",,,A
 shock,C,Electrode shocks C,"0,1",,,A == B
-fancy_lamp,A,Switch A,"0,1,2",,,
-fancy_lamp,B,Switch B,"0,1,2",,,
-fancy_lamp,C,Switch C,"0,1,2",,,
+fancy_lamp,A,Switch A,"0,1,2","0,1,2",,
+fancy_lamp,B,Switch B,"0,1,2","0,1,2",,
+fancy_lamp,C,Switch C,"0,1,2","0,1,2",,
 fancy_lamp,N0,No switch in position 0,"0,1",,,not (A==0 or B==0 or C==0)
 fancy_lamp,N1,No switch in position 1,"0,1",,,not (A==1 or B==1 or C==1)
 fancy_lamp,N2,No switch in position 2,"0,1",,,not (A==2 or B==2 or C==2)
 fancy_lamp,L,Lamp on,"0,1",,,N0 or N1 or N2
-marksman_omission,B,B lifts barrel,"0,1",,,
+marksman_omission,B,B lifts barrel,"0,1","0,1",,
 marksman_omission,A,A aims low,"0,1",,,1-B
 marksman_omission,D,Bullet hits,"0,1",,,1-A
 unloaded_gun,A,marksman aims at target,"0,1",,,
-unloaded_gun,C,marksman cocks gun,"0,1",,,
+unloaded_gun,C,marksman cocks gun,"0,1","0,1",,
 unloaded_gun,P,marksman pulls trigger,"0,1",,,
 unloaded_gun,F,gun fires,"0,1",,,A and C and P
 unloaded_gun,D,victim dies,"0,1",,,F

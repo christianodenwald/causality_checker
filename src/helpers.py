@@ -204,12 +204,16 @@ def print_confusion_matrix_and_f1(df: pd.DataFrame, label: Optional[str] = None)
     print(f"F1={f1:.4f}")
 
 
-def setting_is_at_least_as_normal(vignette: Any, w_setting: Any) -> bool:
-    """Check if the setting w_setting is at least as normal as the vignette's context."""
-    _ = w_setting
+def setting_is_at_least_as_normal(vignette: Any, w_setting: Dict[str, int]) -> bool:
+    """Check if interventions stay within each context variable's equally-normal defaults."""
     for context_var, context_val in vignette.context.items():
-        if context_val == vignette.default_values[context_var]:
-            if vignette.values[context_var] != context_val:
+        defaults = vignette.default_values.get(context_var, [0])
+        if not isinstance(defaults, (list, tuple, set)):
+            defaults = [defaults]
+
+        if context_val in defaults:
+            intervened_val = w_setting.get(context_var, context_val)
+            if intervened_val not in defaults:
                 return False
     return True
 

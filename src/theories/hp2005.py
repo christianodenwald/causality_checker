@@ -76,8 +76,9 @@ def evaluate_hp2005(
                     vignette.set_value(var, val)
                 vignette.propagate_set_values()
 
-                if normality and setting_is_at_least_as_normal(vignette, w_setting) is False:
-                    continue
+                if normality:
+                    if not setting_is_at_least_as_normal(vignette, w_setting):
+                        continue
 
                 effect_differs = vignette.values[effect_variable] != effect_value
                 if query.effect_contrast is not None:

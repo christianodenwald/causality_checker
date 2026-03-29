@@ -21,6 +21,7 @@ try:
         all_splits_with_mandatory_element,
         powerset,
         _format_and_print_result,
+        add_agreement_column,
         add_confusion_matrix_columns,
         load_other_models_group_map,
         print_confusion_matrix_and_f1,
@@ -34,6 +35,7 @@ except ModuleNotFoundError:
         all_splits_with_mandatory_element,
         powerset,
         _format_and_print_result,
+        add_agreement_column,
         add_confusion_matrix_columns,
         load_other_models_group_map,
         print_confusion_matrix_and_f1,
@@ -611,6 +613,8 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette],
     if 'effect_contrast' in df.columns:
         df['effect_contrast'] = pd.to_numeric(df['effect_contrast'], errors='coerce').astype('Int64')
 
+    df = add_agreement_column(df)
+
     model_group_map = load_other_models_group_map()
     df = select_single_model_per_group(df, model_group_map)
     df = add_confusion_matrix_columns(df)
@@ -623,8 +627,9 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette],
             'nonpaper': 'non_paper_queries',
         }
         suffix = scope_suffix_map.get(result_scope, result_scope)
+        normality_suffix = '_normality' if normality else ''
         filter_suffix = '_filter_nl' if filter_nl else ''
-        out_path = OUTPUT_DIR / f'causality_results_{theory}_{gt}_{suffix}{filter_suffix}.csv'
+        out_path = OUTPUT_DIR / f'causality_results_{theory}{normality_suffix}_{gt}_{suffix}{filter_suffix}.csv'
         df.to_csv(out_path, index=False)
         print(f"Results saved to {out_path}")
 

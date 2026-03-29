@@ -11,6 +11,7 @@ import pandas as pd
 
 try:
     from src.helpers import (
+        add_agreement_column,
         add_confusion_matrix_columns,
         _format_and_print_result,
         print_confusion_matrix_and_f1,
@@ -19,6 +20,7 @@ try:
     )
 except ModuleNotFoundError:
     from helpers import (
+        add_agreement_column,
         add_confusion_matrix_columns,
         _format_and_print_result,
         print_confusion_matrix_and_f1,
@@ -366,15 +368,7 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
     if 'effect_contrast' in df.columns:
         df['effect_contrast'] = pd.to_numeric(df['effect_contrast'], errors='coerce').astype('Int64')
 
-    # New column: agreement between computed `result` (bool) and `groundtruth` (0/1).
-    if 'groundtruth' in df.columns:
-        def _agreement(row):
-            if pd.isna(row['groundtruth']) or pd.isna(row.get('result')):
-                return pd.NA
-            return bool(row['result']) == bool(int(row['groundtruth']))
-        df['agreement'] = df.apply(_agreement, axis=1)
-    else:
-        df['agreement'] = pd.NA
+    df = add_agreement_column(df)
 
     model_group_map = load_other_models_group_map()
     df = select_single_model_per_group(df, model_group_map)

@@ -63,6 +63,22 @@ def _format_and_print_result(res, vignette_title: Optional[str], verbose: bool):
     print("====================\n")
 
 
+def add_agreement_column(df: pd.DataFrame) -> pd.DataFrame:
+    """Return a DataFrame with `agreement` derived from `result` vs `groundtruth`."""
+    out = df.copy()
+    if 'groundtruth' in out.columns:
+
+        def _agreement(row):
+            if pd.isna(row['groundtruth']) or pd.isna(row.get('result')):
+                return pd.NA
+            return bool(row['result']) == bool(int(row['groundtruth']))
+
+        out['agreement'] = out.apply(_agreement, axis=1).astype('boolean')
+    else:
+        out['agreement'] = pd.NA
+    return out
+
+
 def add_confusion_matrix_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Return a DataFrame with TP/TN/FP/FN indicator columns derived from result and groundtruth."""
     out = df.copy()

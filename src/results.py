@@ -8,6 +8,7 @@ CM_COLS = ["TP", "TN", "FP", "FN"]
 
 DEFAULT_INPUT_DIR = Path("outputs/")
 DEFAULT_OUTPUT_ROOT = Path("outputs/analysis")
+DEFAULT_VIGNETTES_PATH = Path("data/vignettes.csv")
 
 
 def short_name(path: Path) -> str:
@@ -17,6 +18,24 @@ def short_name(path: Path) -> str:
     if "_intuition" in name:
         name = name.split("_intuition", 1)[0]
     return name
+
+
+def normalize_vignette_id(value: object) -> str:
+    s = str(value).strip()
+    if s.endswith(".0"):
+        s = s[:-2]
+    return s
+
+
+def load_vignette_ids_with_text(vignettes_path: Path = DEFAULT_VIGNETTES_PATH) -> set[str]:
+    vignettes = pd.read_csv(vignettes_path)
+    if "v_id" not in vignettes.columns or "vignette_text" not in vignettes.columns:
+        raise ValueError(
+            f"Expected columns 'v_id' and 'vignette_text' in {vignettes_path}."
+        )
+    text_col = vignettes["vignette_text"].astype("string")
+    keep = vignettes[text_col.notna() & text_col.str.strip().ne("")]
+    return {normalize_vignette_id(v) for v in keep["v_id"]}
 
 
 def to_bool(series: pd.Series) -> pd.Series:
@@ -43,8 +62,44 @@ def ensure_confusion(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def summarize_file(path: Path) -> dict:
-    df = ensure_confusion(pd.read_csv(path))
+def summarize_file(
+    path: Path,
+    only_with_vignette_text: bool = False,
+    text_vignette_ids: set[str] | None = None,
+) -> dict:
+    df = pd.read_csv(path)
+
+    if only_with_vignette_text:
+        if "vignette_text" not in df.columns:
+            if "v_id" not in df.columns:
+                raise ValueError(
+                    f"Neither 'vignette_text' nor 'v_id' is available in {path.name}; cannot apply text-only vignette filter."
+                )
+            if text_vignette_ids is None:
+                raise ValueError(
+                    f"Column 'vignette_text' is missing in {path.name}; provide text_vignette_ids to filter by v_id."
+                )
+            normalized_ids = df["v_id"].map(normalize_vignette_id)
+            mask = normalized_ids.isin(text_vignette_ids)
+
+            # Some result files use generic v_id labels (e.g., "engineer") while
+            # query_id encodes the specific vignette (e.g., "engineer3_q40").
+            if "query_id" in df.columns:
+                query_prefix = (
+                    df["query_id"]
+                    .astype("string")
+                    .str.split("_q", n=1)
+                    .str[0]
+                    .map(normalize_vignette_id)
+                )
+                mask = mask | query_prefix.isin(text_vignette_ids)
+
+            df = df[mask].copy()
+        else:
+            text_col = df["vignette_text"].astype("string")
+            df = df[text_col.notna() & text_col.str.strip().ne("")].copy()
+
+    df = ensure_confusion(df)
     if df[CM_COLS].isna().any().any():
         na_rows = df[df[CM_COLS].isna().any(axis=1)].index.tolist()
         raise ValueError(f"NA found in TP/TN/FP/FN for {path.name} at rows {na_rows[:10]}")
@@ -56,6 +111,7 @@ def summarize_file(path: Path) -> dict:
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
     return {
         "file": short_name(path),
+        "n": int(len(df)),
         "TP": tp,
         "TN": tn,
         "FP": fp,
@@ -267,6 +323,8 @@ def save_selected_chart(summary: pd.DataFrame, charts_dir: Path, stamp: str, cha
 def build_summary(
     input_dir: Path = DEFAULT_INPUT_DIR,
     pattern: str = "causality_results_*_intuition_all_queries.csv",
+    only_with_vignette_text: bool = False,
+    text_vignette_ids: set[str] | None = None,
 ) -> pd.DataFrame:
     files = sorted(input_dir.glob(pattern))
     if not files:
@@ -274,7 +332,14 @@ def build_summary(
             f"No files found in {input_dir} matching pattern {pattern}."
         )
 
-    rows = [summarize_file(p) for p in files]
+    rows = [
+        summarize_file(
+            p,
+            only_with_vignette_text=only_with_vignette_text,
+            text_vignette_ids=text_vignette_ids,
+        )
+        for p in files
+    ]
     summary = pd.DataFrame(rows)
     return summary
 
@@ -288,13 +353,69 @@ def save_summary(summary: pd.DataFrame, summaries_dir: Path, stamp: str) -> None
     print(f"Updated latest summary: {latest_summary}")
 
 
+def sort_for_terminal_print(summary: pd.DataFrame) -> pd.DataFrame:
+    model_order = {"llama3.2": 0, "ministral-3": 1, "gemma3": 2, "gpt-5.4": 3}
+    variant_order = {"zero_shot": 0, "few_shot": 1, "cot": 2}
+
+    def split_model_variant(name: str) -> tuple[str, str]:
+        if name.endswith("_few_shot"):
+            return name[: -len("_few_shot")], "few_shot"
+        if name.endswith("_cot"):
+            return name[: -len("_cot")], "cot"
+        return name, "zero_shot"
+
+    out = summary.copy()
+    parsed = out["file"].map(split_model_variant)
+    out["_base_model"] = parsed.map(lambda x: x[0])
+    out["_variant"] = parsed.map(lambda x: x[1])
+
+    # Theory rows first; LLM rows follow in requested order.
+    out["_is_llm"] = out["_base_model"].isin(model_order)
+    out["_group_rank"] = out["_is_llm"].map(lambda is_llm: 1 if is_llm else 0)
+    out["_model_rank"] = out["_base_model"].map(lambda m: model_order.get(m, 99))
+    out["_variant_rank"] = out["_variant"].map(lambda v: variant_order.get(v, 99))
+
+    out = out.sort_values(
+        by=["_group_rank", "_model_rank", "_variant_rank", "file"],
+        kind="stable",
+    )
+    return out.drop(
+        columns=[
+            "_base_model",
+            "_variant",
+            "_is_llm",
+            "_group_rank",
+            "_model_rank",
+            "_variant_rank",
+        ]
+    )
+
+
 if __name__ == "__main__":
     input_dir = DEFAULT_INPUT_DIR
     pattern = "causality_results_*_intuition_all_queries.csv"
     output_root = DEFAULT_OUTPUT_ROOT
 
-    summary = build_summary(input_dir=input_dir, pattern=pattern)
-    print(summary.to_string(index=False))
+    text_vignette_ids = load_vignette_ids_with_text(DEFAULT_VIGNETTES_PATH)
+
+    summary = build_summary(
+        input_dir=input_dir,
+        pattern=pattern,
+        only_with_vignette_text=True,
+        text_vignette_ids=text_vignette_ids,
+    )
+    summary_for_print = sort_for_terminal_print(summary)
+    print("Summary on vignettes with non-empty vignette_text (used for table + chart):")
+    print(summary_for_print.to_string(index=False))
+
+    full_summary = build_summary(
+        input_dir=input_dir,
+        pattern=pattern,
+        only_with_vignette_text=False,
+    )
+    full_summary_for_print = sort_for_terminal_print(full_summary)
+    print("\nAdditional printout: full dataset summary (all rows):")
+    print(full_summary_for_print.to_string(index=False))
 
     summaries_dir, charts_dir = ensure_output_dirs(output_root)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")

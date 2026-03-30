@@ -147,25 +147,35 @@ def save_f1_grouped_chart(summary: pd.DataFrame, charts_dir: Path, stamp: str) -
     f1_df = summary[["file", "F1"]].copy()
 
     def split_model_variant(name: str) -> tuple[str, str]:
+        if name.endswith("_normality"):
+            return name[: -len("_normality")], "theory+normality"
         if name.endswith("_few_shot"):
             return name[: -len("_few_shot")], "few_shot"
         if name.endswith("_cot"):
             return name[: -len("_cot")], "cot"
+        if name in ("HP2005", "HP2015"):
+            return name, "theory"
         return name, "zero_shot"
 
     parsed = f1_df["file"].map(split_model_variant)
     f1_df["model"] = parsed.map(lambda x: x[0])
     f1_df["variant"] = parsed.map(lambda x: x[1])
 
-    variant_order = ["zero_shot", "few_shot", "cot"]
-    variant_labels = {"zero_shot": "zero", "few_shot": "few", "cot": "cot"}
+    # Separate theories and LLMs
+    theory_variants = ["theory", "theory+normality"]
+    llm_variants = ["zero_shot", "few_shot", "cot"]
+    
+    theory_models = {"HP2005", "HP2015"}
+    
+    # Create pivot table with all possible variants
+    all_variants = theory_variants + llm_variants
     pivot = (
         f1_df.pivot_table(index="model", columns="variant", values="F1", aggfunc="first")
-        .reindex(columns=variant_order)
+        .reindex(columns=all_variants)
         .fillna(0.0)
     )
 
-    preferred_prefix_order = {"llama": 0, "ministral": 1, "gemma": 2, "gpt": 3}
+    preferred_prefix_order = {"llama": 0, "ministral": 1, "gemma": 2, "gpt": 3, "hp": 4}
 
     def model_sort_key(model_name: str) -> tuple[int, str]:
         lowered = model_name.lower()
@@ -176,20 +186,66 @@ def save_f1_grouped_chart(summary: pd.DataFrame, charts_dir: Path, stamp: str) -
 
     model_order = sorted(pivot.index.tolist(), key=model_sort_key)
 
-    fig, ax = plt.subplots(figsize=(11, 5.5))
-    width = 0.24
-    x = list(range(len(model_order)))
+    fig, ax = plt.subplots(figsize=(14, 6))
+    width = 0.3
 
-    for idx, variant in enumerate(variant_order):
-        vals = pd.to_numeric(pivot.loc[model_order, variant], errors="coerce").tolist()
-        offsets = [v + (idx - 1) * width for v in x]
-        ax.bar(offsets, vals, width=width, label=variant_labels[variant])
+    # Keep a constant edge-to-edge gap between groups, even when group widths differ.
+    group_gap = width * 0.5
+    group_sizes = {
+        model: (len(theory_variants) if model in theory_models else len(llm_variants))
+        for model in model_order
+    }
+    x_centers: list[float] = []
+    for idx, model in enumerate(model_order):
+        if idx == 0:
+            x_centers.append(0.0)
+            continue
+        prev_model = model_order[idx - 1]
+        prev_span = group_sizes[prev_model] * width
+        curr_span = group_sizes[model] * width
+        next_center = x_centers[-1] + (prev_span / 2) + group_gap + (curr_span / 2)
+        x_centers.append(next_center)
+    model_center = {model: center for model, center in zip(model_order, x_centers)}
 
-    ax.set_xticks(x, model_order)
+    variant_labels = {
+        "theory": "theory", "theory+normality": "theory+normality",
+        "zero_shot": "zero-shot", "few_shot": "few-shot", "cot": "chain-of-thought"
+    }
+    
+    # Define consistent colors for each variant
+    variant_colors = {
+        "theory": "#E94B3C",        # rust red
+        "theory+normality": "#F1A619",   # gold
+        "zero_shot": "#2E8B57",     # sea green
+        "few_shot": "#4169E1",      # royal blue
+        "cot": "#9370DB"            # medium purple
+    }
+
+    # Plot bars for each model
+    added_labels = set()
+    for model_idx, model in enumerate(model_order):
+        is_theory = model in theory_models
+        variants_to_plot = theory_variants if is_theory else llm_variants
+        num_variants = len(variants_to_plot)
+        center_idx = (num_variants - 1) / 2
+
+        for bar_idx, variant in enumerate(variants_to_plot):
+            val = pd.to_numeric(pivot.loc[model, variant], errors="coerce")
+            if val == 0.0 and variant not in f1_df[f1_df["model"] == model]["variant"].values:
+                continue  # Skip if variant doesn't exist for this model
+            offset = model_center[model] + (bar_idx - center_idx) * width
+            label = variant_labels[variant] if variant not in added_labels else None
+            ax.bar(offset, val, width=width, label=label, color=variant_colors[variant])
+            added_labels.add(variant)
+
+    ax.set_xticks(x_centers)
+    ax.set_xticklabels(model_order, fontsize=18)
     ax.set_ylim(0, 1.0)
-    ax.set_ylabel("F1")
-    ax.set_title("F1 by model")
-    ax.legend(title="mode")
+    ax.set_ylabel("F1", fontsize=22)
+    ax.tick_params(axis="y", labelsize=18)
+    ax.grid(axis="y", alpha=0.3, linestyle="--")
+    ax.set_axisbelow(True)
+    legend = ax.legend(title="", loc="upper left", framealpha=0.95, fontsize=17, title_fontsize=18)
     fig.tight_layout()
     fig.savefig(str(charts_dir / f"f1_grouped_by_model_{stamp}.png"), dpi=180)
     fig.savefig(str(charts_dir / "f1_grouped_by_model_latest.png"), dpi=180)
@@ -245,6 +301,6 @@ if __name__ == "__main__":
 
     # Toggle one of these as needed:
     save_summary(summary, summaries_dir, stamp)
-    # save_selected_chart(summary, charts_dir, stamp, chart="f1")
+    save_selected_chart(summary, charts_dir, stamp, chart="f1")
     # save_selected_chart(summary, charts_dir, stamp, chart="performance")
     # save_selected_chart(summary, charts_dir, stamp, chart="confusion")

@@ -709,8 +709,8 @@ if __name__ == "__main__":
     vignettes = load_vignettes(vignettes_path, variables_path)
     queries = load_queries(queries_path)
     # check_causality('HP2005', vignettes['ff_disj'], queries[0]) # test call for single query
-    skip = ['rock_bottle_noisy', 'rock_bottle_time']
-    # skip = []
+    # skip = ['rock_bottle_noisy', 'rock_bottle_time']
+    skip = []
     # evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
 
     # df_paper_HP2005 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip, save=True)

@@ -472,7 +472,7 @@ if __name__ == "__main__":
     # llm_results_cot = run_llm_queries(vignettes=vignettes, queries=queries, gt='intuition', verbose=False, save=True, prompt='cot', model=model)
 
     for model in ['llama3.2', 'gemma3', 'ministral-3', 'gpt-5.4']:
-        for prompt in ['zero-shot', 'few-shot', ]:
+        for prompt in ['zero-shot', 'few-shot', 'cot']:
             print(f"\nRunning model {model} with prompt={prompt}...")
             llm_results = run_llm_queries(vignettes=vignettes, queries=queries, gt='intuition', verbose=False, save=True, prompt=prompt, model=model)
 

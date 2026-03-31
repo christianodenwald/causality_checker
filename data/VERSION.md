@@ -2,13 +2,13 @@
 
 ## Version History
 
-| Version | Date | Commit | Vignettes | Queries | Status |
+| Version | Date | Commit | Vignettes (total / NL / dedup / dedup+NL) | Queries (total / NL / dedup / dedup+NL) | Status |
 |---|---|---|---:|---:|---|
-| v0.1.0 | DATE | COMMIT | 58 (52) | 149 (133) | Current |
+| v1.0 | DATE | COMMIT | 58 / 52 / 54 / 48 | 149 / 133 / 135 / 119 | Current |
 
 ## Changelog
 
-### v0.1.0
+### v1.0
 Date: ```DATE``` | Commit: ```COMMIT```
-- First entry.
-- 58 vignettes, 149 queries (with text description: 52 vignette, 133 queries)
+- Version that the evaluation in the original paper was performed on.
+- 58 vignettes, 149 queries total. NL, deduplicated, and deduplicated+NL version available.

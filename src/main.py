@@ -661,6 +661,7 @@ def evaluate_non_paper_queries(vignettes: Dict[str, Vignette], queries: List[Que
                               query_list: Optional[List[str]] = None, theory: str = 'HP2005',
                               gt: str = 'intuition', skip: Optional[List[str]] = None, verbose: bool = False,
                               save: bool = False,
+                              normality: bool = False,
                               filter_nl: bool = False) -> pd.DataFrame:
     """
     Filter `queries` to those NOT in `query_list` (if provided) and call evaluate_all_queries.
@@ -678,6 +679,7 @@ def evaluate_non_paper_queries(vignettes: Dict[str, Vignette], queries: List[Que
         skip=skip,
         verbose=verbose,
         save=save,
+        normality=normality,
         result_scope='nonpaper',
         filter_nl=filter_nl,
     )
@@ -732,15 +734,16 @@ if __name__ == "__main__":
     # all_HP2015 = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', verbose=False, skip=skip, save=True)
     # nonpaper_HP2005 = evaluate_non_paper_queries(vignettes, queries, query_list=HP2005_examples, theory='HP2005', gt='intuition', verbose=False, skip=skip, save=True)
     # nonpaper_HP2015 = evaluate_non_paper_queries(vignettes, queries, query_list=HP2015_examples, theory='HP2015', gt='intuition', verbose=False, skip=skip, save=True)
+    nonpaper_HP2015_normality = evaluate_non_paper_queries(vignettes, queries, query_list=HP2015_examples, theory='HP2015', gt='intuition', verbose=False, skip=skip, save=True, normality=True)
 
     # find queries with disagreements
     # disagreements_HP2005 = all_HP2005[all_HP2005['agreement'] == False]
     # disagreements_HP2015 = all_HP2015[all_HP2015['agreement'] == False]
 
     # revisions
-    HP2005 = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip, save=True)
-    HP2015 = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip=skip, save=True)
-    HP2005_norm = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip, save=True, normality=True)
-    HP2015_norm = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip=skip, save=True, normality=True)
+    # HP2005 = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip, save=True)
+    # HP2015 = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip=skip, save=True)
+    # HP2005_norm = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip, save=True, normality=True)
+    # HP2015_norm = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip=skip, save=True, normality=True)
 
 print()

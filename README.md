@@ -21,7 +21,7 @@ For Ollama-based LLM evaluation: `brew install ollama && ollama pull MODEL`
 
 ## Usage
 
-### Theories of actual causation (HP2005/HP2015):
+### Theories of Actual Causation (HP2005/HP2015):
 
 in ```src/main.py```:
 
@@ -59,7 +59,7 @@ In the case of binary variables (which most are), every cause is automatically c
 
 
 
-### LLM evaluation (Ollama or OpenAI):
+### LLM Evaluation (Ollama or OpenAI):
 
 in ```src/llm.py```:
 
@@ -73,6 +73,9 @@ llm_results = run_llm_queries(vignettes=vignettes, queries=queries, gt='intuitio
 Provider selection is inferred from `model`:
 - OpenAI: if it starts with `gpt`
 - Ollama: any other model string (for example `llama3.2`, `gemma3`, `ministral-3`)
+
+If running this script for an OpenAI model, ensure the openai package is available and the API key is set.
+
 
 
 ## Data

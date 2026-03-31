@@ -317,12 +317,29 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
                     result_scope: str = 'all',
                     model: str = 'llama3.2',
                     prompt: str = 'zero-shot') -> pd.DataFrame:
+    model_group_map = load_other_models_group_map()
+    # Keep only one representative vignette per model_group (identical text variants).
+    # We preserve original query order and keep the first encountered vignette for each group.
+    seen_groups = set()
+    filtered_queries: List[Query] = []
+    for query in queries:
+        query_v_id = str(query.v_id) if query.v_id is not None else ''
+        model_group = model_group_map.get(query_v_id, query_v_id)
+        if model_group in seen_groups:
+            continue
+        seen_groups.add(model_group)
+        filtered_queries.append(query)
+
+    if len(filtered_queries) != len(queries):
+        print(
+            f"Filtered duplicate model groups: running {len(filtered_queries)} of {len(queries)} queries."
+        )
 
     records: List[Dict[str, Any]] = []
     unclear_query_ids: List[str] = []
     skipped_query_ids: List[str] = []
     skip_set = set(skip or [])
-    total_queries = len(queries)
+    total_queries = len(filtered_queries)
     prompt_mode = _normalize_prompt_mode(prompt)
     run_prefix = f"{model} | Prompt={prompt_mode}"
 
@@ -330,7 +347,7 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
         print('No queries to process.')
         return pd.DataFrame()
 
-    for i, query in enumerate(queries):
+    for i, query in enumerate(filtered_queries):
         _print_progress(i + 1, total_queries, prefix=run_prefix)
         query_label = query.query_id or f'idx_{i}'
 
@@ -370,7 +387,6 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
 
     df = add_agreement_column(df)
 
-    model_group_map = load_other_models_group_map()
     df = select_single_model_per_group(df, model_group_map)
     df = add_confusion_matrix_columns(df)
     print_confusion_matrix_and_f1(df, label=f"{model} ({gt}, {result_scope}, {prompt_mode}, single-model-group)")

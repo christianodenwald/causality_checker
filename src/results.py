@@ -303,12 +303,22 @@ def save_f1_grouped_chart(summary: pd.DataFrame, charts_dir: Path, stamp: str) -
     }
     
     # Define consistent colors for each variant
+    # variant_colors = {
+    #     "theory": "#E94B3C",        # rust red
+    #     "theory+normality": "#F1A619",   # gold
+    #     "zero_shot": "#2E8B57",     # sea green
+    #     "few_shot": "#4169E1",      # royal blue
+    #     "cot": "#9370DB"            # medium purple
+    # }
+
+    color_string = "#0088FE #00C49F #FFBB28 #FF8042 #8884d8".split(' ') # colorblind friendly palette
     variant_colors = {
-        "theory": "#E94B3C",        # rust red
-        "theory+normality": "#F1A619",   # gold
-        "zero_shot": "#2E8B57",     # sea green
-        "few_shot": "#4169E1",      # royal blue
-        "cot": "#9370DB"            # medium purple
+        "theory": color_string[2],
+        "theory+normality": color_string[3],
+        "zero_shot": color_string[0],
+        "few_shot": color_string[1],
+        "cot": color_string[4]
+
     }
 
     # Plot bars for each model
@@ -439,6 +449,7 @@ if __name__ == "__main__":
         pattern=pattern,
         only_with_vignette_text=True,
         text_vignette_ids=text_vignette_ids,
+        apply_model_group_filter=True,
     )
     summary_for_print = sort_for_terminal_print(summary)
     print("Summary on vignettes with non-empty vignette_text (used for table + chart):")
@@ -448,6 +459,7 @@ if __name__ == "__main__":
         input_dir=input_dir,
         pattern=pattern,
         only_with_vignette_text=False,
+        apply_model_group_filter=True,
     )
     full_summary_for_print = sort_for_terminal_print(full_summary)
     print("\nAdditional printout: full dataset summary (all rows):")
@@ -457,7 +469,7 @@ if __name__ == "__main__":
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # Toggle one of these as needed:
-    save_summary(summary, summaries_dir, stamp)
-    save_selected_chart(summary, charts_dir, stamp, chart="f1")
+    # save_summary(summary, summaries_dir, stamp)
+    # save_selected_chart(summary, charts_dir, stamp, chart="f1")
     # save_selected_chart(summary, charts_dir, stamp, chart="performance")
     # save_selected_chart(summary, charts_dir, stamp, chart="confusion")

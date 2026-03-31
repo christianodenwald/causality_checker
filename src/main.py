@@ -614,11 +614,8 @@ def evaluate_all_queries(vignettes: Dict[str, Vignette],
         df['effect_contrast'] = pd.to_numeric(df['effect_contrast'], errors='coerce').astype('Int64')
 
     df = add_agreement_column(df)
-
-    model_group_map = load_other_models_group_map()
-    df = select_single_model_per_group(df, model_group_map)
     df = add_confusion_matrix_columns(df)
-    print_confusion_matrix_and_f1(df, label=f"{theory} ({gt}, {result_scope}, single-model-group)")
+    print_confusion_matrix_and_f1(df, label=f"{theory} ({gt}, {result_scope})")
 
     if save:
         scope_suffix_map = {
@@ -709,7 +706,7 @@ if __name__ == "__main__":
     vignettes = load_vignettes(vignettes_path, variables_path)
     queries = load_queries(queries_path)
     # check_causality('HP2005', vignettes['ff_disj'], queries[0]) # test call for single query
-    # skip = ['rock_bottle_noisy', 'rock_bottle_time']
+    skip = ['rock_bottle_noisy', 'rock_bottle_time']
     skip = []
     # evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
 

@@ -215,7 +215,7 @@ def print_confusion_matrix_and_f1(df: pd.DataFrame, label: Optional[str] = None)
 
     header = f"{label} confusion matrix and F1" if label else 'Confusion matrix and F1'
     print(f"\n{header}:")
-    print(f"TP={tp}, TN={tn}, FP={fp}, FN={fn}")
+    print(f"n={tp + tn + fp + fn}, TP={tp}, TN={tn}, FP={fp}, FN={fn}")
     print(f"Total correct={total_true}, Total incorrect={total_false}")
     print(f"F1={f1:.4f}")
 

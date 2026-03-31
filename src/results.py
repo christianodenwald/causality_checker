@@ -1,7 +1,22 @@
 from pathlib import Path
 from datetime import datetime
+import sys
+import os
 
 import pandas as pd
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+try:
+    from src.helpers import (
+        load_other_models_group_map,
+        select_single_model_per_group,
+    )
+except ModuleNotFoundError:
+    from helpers import (
+        load_other_models_group_map,
+        select_single_model_per_group,
+    )
 
 
 CM_COLS = ["TP", "TN", "FP", "FN"]
@@ -9,6 +24,21 @@ CM_COLS = ["TP", "TN", "FP", "FN"]
 DEFAULT_INPUT_DIR = Path("outputs/")
 DEFAULT_OUTPUT_ROOT = Path("outputs/analysis")
 DEFAULT_VIGNETTES_PATH = Path("data/vignettes.csv")
+
+
+def filter_by_model_group(df: pd.DataFrame, vignettes_path: Path = DEFAULT_VIGNETTES_PATH) -> pd.DataFrame:
+    """Filter dataframe to single model per group using the model-group map from vignettes.
+    
+    This is called during analysis to deduplicate models that are variants of the same base model.
+    Args:
+        df: DataFrame with results (must have 'v_id', 'result', 'groundtruth' columns)
+        vignettes_path: Path to vignettes CSV for loading model-group mappings
+    
+    Returns:
+        Filtered DataFrame with single model selected per group
+    """
+    model_group_map = load_other_models_group_map(vignettes_path)
+    return select_single_model_per_group(df, model_group_map)
 
 
 def short_name(path: Path) -> str:
@@ -66,8 +96,12 @@ def summarize_file(
     path: Path,
     only_with_vignette_text: bool = False,
     text_vignette_ids: set[str] | None = None,
+    apply_model_group_filter_flag: bool = False,
 ) -> dict:
     df = pd.read_csv(path)
+
+    if apply_model_group_filter_flag:
+        df = filter_by_model_group(df)
 
     if only_with_vignette_text:
         if "vignette_text" not in df.columns:
@@ -325,6 +359,7 @@ def build_summary(
     pattern: str = "causality_results_*_intuition_all_queries.csv",
     only_with_vignette_text: bool = False,
     text_vignette_ids: set[str] | None = None,
+    apply_model_group_filter: bool = False,
 ) -> pd.DataFrame:
     files = sorted(input_dir.glob(pattern))
     if not files:
@@ -337,6 +372,7 @@ def build_summary(
             p,
             only_with_vignette_text=only_with_vignette_text,
             text_vignette_ids=text_vignette_ids,
+            apply_model_group_filter_flag=apply_model_group_filter,
         )
         for p in files
     ]

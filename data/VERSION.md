@@ -4,7 +4,7 @@
 
 | Version | Date | Commit | Vignettes (total / NL / dedup / dedup+NL) | Queries (total / NL / dedup / dedup+NL) | Status |
 |---|---|---|---:|---:|---|
-| v1.0 | DATE | COMMIT | 58 / 52 / 54 / 48 | 149 / 133 / 135 / 119 | Current |
+| v1.0 | DATE | COMMIT | 58 / 52 / 53 / 47 | 149 / 133 / 128 / 112 | Current |
 
 ## Changelog
 

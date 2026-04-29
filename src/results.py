@@ -463,7 +463,7 @@ def save_f1_grouped_chart(summary: pd.DataFrame, charts_dir: Path, stamp: str) -
     ax.tick_params(axis="y", labelsize=18)
     ax.grid(axis="y", alpha=0.3, linestyle="--")
     ax.set_axisbelow(True)
-    legend = ax.legend(title="", loc="upper left", framealpha=0.95, fontsize=13.5, title_fontsize=18)
+    legend = ax.legend(title="", loc="upper left", framealpha=0.95, fontsize=13.5, title_fontsize=18, ncol=2)
     fig.tight_layout()
     fig.savefig(str(charts_dir / f"f1_grouped_by_model_{stamp}.png"), dpi=180)
     fig.savefig(str(charts_dir / "f1_grouped_by_model_latest.png"), dpi=180)

@@ -10,6 +10,8 @@ import pandas as pd
 from dataclasses import dataclass, asdict
 from data.paper_examples import *
 
+from sanitized_parser import sanitize_and_parse
+
 try:
     from src.theories import THEORY_EVALUATORS
 except ModuleNotFoundError:
@@ -120,8 +122,7 @@ class Vignette:
         parsed_equations = {}
         for var, eq in equations.items():
             if isinstance(eq, str):  # If it's a string, parse it
-                parsed_equations[var] = lambda values, eq=eq: int(
-                    eval(eq, {}, {k: int(v) if v is not None else 0 for k, v in values.items()}))
+                parsed_equations[var] = sanitize_and_parse(eq)
             elif callable(eq):  # If it's already callable, use it directly
                 parsed_equations[var] = eq
             else:

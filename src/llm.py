@@ -15,8 +15,6 @@ try:
         add_confusion_matrix_columns,
         _format_and_print_result,
         print_confusion_matrix_and_f1,
-        load_other_models_group_map,
-        select_single_model_per_group,
     )
 except ModuleNotFoundError:
     from helpers import (
@@ -24,8 +22,6 @@ except ModuleNotFoundError:
         add_confusion_matrix_columns,
         _format_and_print_result,
         print_confusion_matrix_and_f1,
-        load_other_models_group_map,
-        select_single_model_per_group,
     )
 
 from main import (
@@ -46,37 +42,6 @@ vignettes = load_vignettes(vignettes_path, variables_path, filter_nl=True)
 
 
 ALLOWED_PROMPT_MODES = {'zero-shot', 'few-shot', 'cot'}
-
-
-def _filter_queries_to_single_model_per_group(
-    queries: List[Query],
-    model_group_map: Dict[str, str],
-) -> Tuple[List[Query], List[str]]:
-    """Keep queries for only one vignette per `other_models` group.
-
-    Selection is stable by input order: the first vignette seen for each group is kept,
-    and all later vignettes from the same group are skipped.
-    """
-    selected_vignette_by_group: Dict[str, str] = {}
-    filtered_queries: List[Query] = []
-    skipped_query_ids: List[str] = []
-
-    for idx, query in enumerate(queries):
-        v_id = str(query.v_id)
-        group_key = str(model_group_map.get(v_id, v_id)).strip() or v_id
-
-        selected_v_id = selected_vignette_by_group.get(group_key)
-        if selected_v_id is None:
-            selected_vignette_by_group[group_key] = v_id
-            selected_v_id = v_id
-
-        if v_id == selected_v_id:
-            filtered_queries.append(query)
-            continue
-
-        skipped_query_ids.append(query.query_id or f'idx_{idx}')
-
-    return filtered_queries, skipped_query_ids
 
 
 def _normalize_prompt_mode(prompt_mode: str) -> str:
@@ -355,23 +320,13 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
     skip_set = set(skip or [])
     prompt_mode = _normalize_prompt_mode(prompt)
     run_prefix = f"{model} | Prompt={prompt_mode}"
-    model_group_map = load_other_models_group_map()
-
-    filtered_queries, model_group_skipped = _filter_queries_to_single_model_per_group(queries, model_group_map)
-    skipped_query_ids.extend(model_group_skipped)
-    total_queries = len(filtered_queries)
-
-    if len(filtered_queries) != len(queries):
-        print(
-            f"Model-group pre-filter active: running {len(filtered_queries)} of {len(queries)} queries "
-            f"(one vignette per model group)."
-        )
+    total_queries = len(queries)
 
     if total_queries == 0:
         print('No queries to process.')
         return pd.DataFrame()
 
-    for i, query in enumerate(filtered_queries):
+    for i, query in enumerate(queries):
         _print_progress(i + 1, total_queries, prefix=run_prefix)
         query_label = query.query_id or f'idx_{i}'
 
@@ -410,9 +365,8 @@ def run_llm_queries(vignettes: Dict[str, Vignette],
         df['effect_contrast'] = pd.to_numeric(df['effect_contrast'], errors='coerce').astype('Int64')
 
     df = add_agreement_column(df)
-    df = select_single_model_per_group(df, model_group_map)
     df = add_confusion_matrix_columns(df)
-    print_confusion_matrix_and_f1(df, label=f"{model} ({gt}, {result_scope}, {prompt_mode}, single-model-group)")
+    print_confusion_matrix_and_f1(df, label=f"{model} ({gt}, {result_scope}, {prompt_mode})")
 
     if save:
         scope_suffix_map = {

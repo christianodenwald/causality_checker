@@ -23,9 +23,7 @@ try:
         _format_and_print_result,
         add_agreement_column,
         add_confusion_matrix_columns,
-        load_other_models_group_map,
         print_confusion_matrix_and_f1,
-        select_single_model_per_group,
         setting_is_at_least_as_normal,
         get_query_by_id,
     )
@@ -37,9 +35,7 @@ except ModuleNotFoundError:
         _format_and_print_result,
         add_agreement_column,
         add_confusion_matrix_columns,
-        load_other_models_group_map,
         print_confusion_matrix_and_f1,
-        select_single_model_per_group,
         setting_is_at_least_as_normal,
         get_query_by_id,
     )
@@ -84,8 +80,9 @@ class Vignette:
             information.
     """
 
-    def __init__(self, vignette_id, title, vignette_text, variables, ranges, values, default_values, equations, context):
+    def __init__(self, vignette_id, model_id, title, vignette_text, variables, ranges, values, default_values, equations, context):
         self.vignette_id = vignette_id
+        self.model_id = model_id
         self.title = title
         self.vignette_text = vignette_text
         self.variables = variables
@@ -209,6 +206,7 @@ class Query:
         # Unique identifier for the query (added to allow running single queries)
         self.query_id = query_id
         self.v_id = v_id
+        self.model_id = v_id
         self.cause = cause
         self.effect = effect
         self.effect_contrast = int(effect_contrast) if effect_contrast is not None and pd.notna(effect_contrast) and effect_contrast != '' else None
@@ -250,7 +248,7 @@ class EvaluationResult:
 #### FUNCTIONS
 
 def load_vignettes(vignettes_csv_path, variables_csv_path, filter_nl: bool = False):
-    """Loads vignettes from a CSV file.
+    """Load vignettes from the two-table dataset schema.
 
     Args:
         vignettes_csv_path: Path to the vignette metadata CSV.
@@ -258,16 +256,38 @@ def load_vignettes(vignettes_csv_path, variables_csv_path, filter_nl: bool = Fal
         filter_nl: When True, remove vignettes with missing/blank vignette_text.
     """
 
-    vignettes_df = pd.read_csv(vignettes_csv_path)
-    for col in ['variable_order', 'context']:
-        vignettes_df[col] = vignettes_df[col].str.split(',')
-        # Optional: strip whitespace from each item in the lists
-        vignettes_df[col] = vignettes_df[col].apply(lambda x: [item.strip() for item in x] if isinstance(x, list) else x)
+    def _split_csv_list_columns(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
+        out = df.copy()
+        for col in columns:
+            if col not in out.columns:
+                continue
+            out[col] = out[col].apply(lambda value: value.split(',') if isinstance(value, str) else value)
+            out[col] = out[col].apply(lambda x: [item.strip() for item in x] if isinstance(x, list) else x)
+        return out
 
+    vignettes_df = pd.read_csv(vignettes_csv_path)
     variables_df = pd.read_csv(variables_csv_path)
+    models_csv_path = Path(vignettes_csv_path).with_name('models.csv')
+    models_df = pd.read_csv(models_csv_path)
+
+    required_vignette_cols = {'v_id', 'title', 'vignette_text'}
+    required_model_cols = {'v_id', 'vignette_id', 'se_id', 'variable_order', 'context'}
+    required_variable_cols = {'se_id', 'variable_name', 'range', 'default_values', 'structural_equation'}
+
+    missing_vignette_cols = sorted(required_vignette_cols - set(vignettes_df.columns))
+    missing_model_cols = sorted(required_model_cols - set(models_df.columns))
+    missing_variable_cols = sorted(required_variable_cols - set(variables_df.columns))
+
+    if missing_vignette_cols:
+        raise ValueError(f"vignettes.csv is missing required columns: {missing_vignette_cols}")
+    if missing_model_cols:
+        raise ValueError(f"models.csv is missing required columns: {missing_model_cols}")
+    if missing_variable_cols:
+        raise ValueError(f"variables.csv is missing required columns: {missing_variable_cols}")
+
+    models_df = _split_csv_list_columns(models_df, ['variable_order', 'context'])
     variables_df['range'] = variables_df['range'].str.split(',')
-    # Optional: strip whitespace from each item in the lists
-    variables_df['range'] = variables_df['range'].apply(lambda x: [item.strip() for item in x] if isinstance(x, str) else x)
+    variables_df['range'] = variables_df['range'].apply(lambda x: [item.strip() for item in x] if isinstance(x, list) else x)
 
     vignettes = dict()
 
@@ -307,26 +327,24 @@ def load_vignettes(vignettes_csv_path, variables_csv_path, filter_nl: bool = Fal
         return [0]
 
 
-    for j, (_, vignette_row) in enumerate(vignettes_df.iterrows()):
-        variable_data = variables_df.loc[variables_df.se_id == vignette_row['se_id']]
-
-        variables_raw = vignette_row.get('variable_order', [])
-        context_raw = vignette_row.get('context', [])
+    def _build_vignette_object(
+        model_id: str,
+        vignette_id: str,
+        title: Optional[str],
+        vignette_text: Optional[str],
+        variables_raw: Any,
+        context_raw: Any,
+        variable_data: pd.DataFrame,
+    ) -> Vignette:
         if not isinstance(variables_raw, list) or not isinstance(context_raw, list):
             raise ValueError(
-                f"Invalid list-like values for vignette row {j}: variable_order={type(variables_raw)}, context={type(context_raw)}"
+                f"Invalid list-like values for vignette/model {model_id}: variable_order={type(variables_raw)}, context={type(context_raw)}"
             )
 
         variables = [str(var).strip() for var in variables_raw]
         context_values = [str(val).strip() for val in context_raw]
 
-        values = {var: int(context_values[i]) if i < len(context_values) else np.nan for i, var in
-                  enumerate(variables)}
-
-        # default_values = dict()
-        # for var in variables:
-        #     # default_values[var] = variable_data.loc[variable_data['variable_name'] == var, 'default_values'].iloc[0] if any(variable_data['variable_name'] == var) else None
-        #     default_values[var] = int(variable_data.loc[variable_data['variable_name'] == var, 'default_values'].iloc[0]) if variable_data.loc[variable_data['variable_name'] == var, 'default_values'].iloc[0] else np.nan
+        values = {var: int(context_values[i]) if i < len(context_values) else np.nan for i, var in enumerate(variables)}
 
         default_values = {}
         for var in variable_data['variable_name'].unique():
@@ -335,7 +353,7 @@ def load_vignettes(vignettes_csv_path, variables_csv_path, filter_nl: bool = Fal
             default_values[var] = _parse_default_values(raw_default)
 
         equations = dict()
-        for index, row in variable_data.iterrows():
+        for _, row in variable_data.iterrows():
             if row['structural_equation'] is not np.nan:
                 equations[row['variable_name']] = row['structural_equation']
 
@@ -345,7 +363,6 @@ def load_vignettes(vignettes_csv_path, variables_csv_path, filter_nl: bool = Fal
         for i in range(context_length):
             context[context_vars[i]] = int(context_values[i])
 
-
         ranges = dict()
         for var in variables:
             range_str = variable_data.loc[variable_data['variable_name'] == var, 'range'].iloc[0] if any(
@@ -354,21 +371,48 @@ def load_vignettes(vignettes_csv_path, variables_csv_path, filter_nl: bool = Fal
                 ranges[var] = [int(x) for x in range_str]
             else:
                 ranges[var] = None
-        # values_in_example = dict()
 
-        # print(f"Vignette ID: {vignette_row['v_id']}")
-        vignettes[vignette_row['v_id']] = Vignette(
-            vignette_id=f"v{j}_{vignette_row['v_id']}",
-            title=vignette_row['title'],
-            vignette_text=vignette_row['vignette_text'] if pd.notna(vignette_row['vignette_text']) and vignette_row['vignette_text'] != '' else None,
-                variables=variables,
-                context = context,
-                ranges=ranges,
-                values=values,
-                default_values=default_values,
-                equations=equations,
-                # values_in_example=values_in_example,
-            )
+        return Vignette(
+            vignette_id=vignette_id,
+            model_id=model_id,
+            title=title,
+            vignette_text=vignette_text,
+            variables=variables,
+            context=context,
+            ranges=ranges,
+            values=values,
+            default_values=default_values,
+            equations=equations,
+        )
+
+    vignette_lookup = vignettes_df.set_index('v_id').to_dict('index')
+
+    for _, model_row in models_df.iterrows():
+        model_id = str(model_row.get('v_id', '')).strip()
+        vignette_id = str(model_row.get('vignette_id', '')).strip()
+        if not model_id or not vignette_id:
+            continue
+
+        vignette_row = vignette_lookup.get(vignette_id)
+        if vignette_row is None:
+            raise ValueError(f"Model '{model_id}' references missing vignette id '{vignette_id}'.")
+
+        variable_data = variables_df.loc[variables_df.se_id == model_row['se_id']]
+        vignette_text = vignette_row.get('vignette_text')
+        if filter_nl and (pd.isna(vignette_text) or str(vignette_text).strip() == ''):
+            continue
+
+        vignette = _build_vignette_object(
+            model_id=model_id,
+            vignette_id=vignette_id,
+            title=vignette_row.get('title'),
+            vignette_text=vignette_text if pd.notna(vignette_text) and str(vignette_text).strip() != '' else None,
+            variables_raw=model_row.get('variable_order', []),
+            context_raw=model_row.get('context', []),
+            variable_data=variable_data,
+        )
+        vignettes[model_id] = vignette
+
     total_vignettes = len(vignettes)
     if filter_nl:
         filtered_vignettes = {
@@ -391,17 +435,21 @@ def load_queries(csv_path):
     # Load the DataFrame from the CSV file
     df = pd.read_csv(csv_path)
 
+    if 'model_id' not in df.columns:
+        raise ValueError("queries.csv must include a 'model_id' column.")
+
     query_objects = []
     for idx, (_, row) in enumerate(df.iterrows()):
         # Replace NaN or empty strings with None
         # create a stable, unique query id (use existing column if present, otherwise derive one)
+        model_id = row.get('model_id')
         if 'query_id' in row.index and pd.notna(row.get('query_id')) and row.get('query_id') != '':
             qid = str(row.get('query_id'))
         else:
-            qid = f"{row['v_id']}_q{idx}"
+            qid = f"{model_id}_q{idx}"
 
         query = Query(
-            v_id=row['v_id'] if pd.notna(row['v_id']) and row['v_id'] != '' else None,
+            v_id=model_id if pd.notna(model_id) and model_id != '' else None,
             cause=row['cause'] if pd.notna(row['cause']) and row['cause'] != '' else None,
             effect=row['effect'] if pd.notna(row['effect']) and row['effect'] != '' else None,
             effect_contrast=row.get('effect_contrast') if 'effect_contrast' in row.index and pd.notna(row.get('effect_contrast')) and row.get('effect_contrast') != '' else None,
@@ -709,7 +757,7 @@ if __name__ == "__main__":
     queries = load_queries(queries_path)
     # check_causality('HP2005', vignettes['ff_disj'], queries[0]) # test call for single query
     skip = ['rock_bottle_noisy', 'rock_bottle_time']
-    skip = []
+    # skip = []
     # evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip)
 
     # df_paper_HP2005 = reproduce_paper_results(vignettes=vignettes, queries=queries, query_list=HP2005_examples, theory='HP2005', gt='HP05', skip=skip, save=True)
@@ -741,9 +789,9 @@ if __name__ == "__main__":
     # disagreements_HP2015 = all_HP2015[all_HP2015['agreement'] == False]
 
     # revisions
-    HP2005 = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip, save=True)
+    # HP2005 = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip, save=True)
     HP2015 = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip=skip, save=True)
-    HP2005_norm = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip, save=True, normality=True)
-    HP2015_norm = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip=skip, save=True, normality=True)
+    # HP2005_norm = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip, save=True, normality=True)
+    # HP2015_norm = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip=skip, save=True, normality=True)
 
 print()

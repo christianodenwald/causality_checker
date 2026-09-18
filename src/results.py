@@ -1,5 +1,5 @@
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 import sys
 import os
 import math
@@ -9,38 +9,17 @@ import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-try:
-    from src.helpers import (
-        load_other_models_group_map,
-        select_single_model_per_group,
-    )
-except ModuleNotFoundError:
-    from helpers import (
-        load_other_models_group_map,
-        select_single_model_per_group,
-    )
-
-
 CM_COLS = ["TP", "TN", "FP", "FN"]
 
 DEFAULT_INPUT_DIR = Path("outputs/")
 DEFAULT_OUTPUT_ROOT = Path("outputs/analysis")
 DEFAULT_VIGNETTES_PATH = Path("data/vignettes.csv")
+DEFAULT_MODELS_PATH = Path("data/models.csv")
 
 
 def filter_by_model_group(df: pd.DataFrame, vignettes_path: Path = DEFAULT_VIGNETTES_PATH) -> pd.DataFrame:
-    """Filter dataframe to single model per group using the model-group map from vignettes.
-    
-    This is called during analysis to deduplicate models that are variants of the same base model.
-    Args:
-        df: DataFrame with results (must have 'v_id', 'result', 'groundtruth' columns)
-        vignettes_path: Path to vignettes CSV for loading model-group mappings
-    
-    Returns:
-        Filtered DataFrame with single model selected per group
-    """
-    model_group_map = load_other_models_group_map(vignettes_path)
-    return select_single_model_per_group(df, model_group_map)
+    """Legacy compatibility hook; model deduplication now comes from the data model."""
+    return df.copy()
 
 
 def short_name(path: Path) -> str:
@@ -59,14 +38,23 @@ def normalize_vignette_id(value: object) -> str:
     return s
 
 
-def load_vignette_ids_with_text(vignettes_path: Path = DEFAULT_VIGNETTES_PATH) -> set[str]:
+def load_vignette_ids_with_text(
+    vignettes_path: Path = DEFAULT_VIGNETTES_PATH,
+    models_path: Path = DEFAULT_MODELS_PATH,
+) -> set[str]:
     vignettes = pd.read_csv(vignettes_path)
+    models = pd.read_csv(models_path)
+
     if "v_id" not in vignettes.columns or "vignette_text" not in vignettes.columns:
-        raise ValueError(
-            f"Expected columns 'v_id' and 'vignette_text' in {vignettes_path}."
-        )
-    text_col = vignettes["vignette_text"].astype("string")
-    keep = vignettes[text_col.notna() & text_col.str.strip().ne("")]
+        raise ValueError(f"Expected columns 'v_id' and 'vignette_text' in {vignettes_path}.")
+    if "v_id" not in models.columns or "vignette_id" not in models.columns:
+        raise ValueError(f"Expected columns 'v_id' and 'vignette_id' in {models_path}.")
+
+    text_vignette_ids = {
+        normalize_vignette_id(v)
+        for v in vignettes.loc[vignettes["vignette_text"].astype("string").notna() & vignettes["vignette_text"].astype("string").str.strip().ne(""), "v_id"]
+    }
+    keep = models[models["vignette_id"].astype("string").map(normalize_vignette_id).isin(text_vignette_ids)]
     return {normalize_vignette_id(v) for v in keep["v_id"]}
 
 
@@ -189,7 +177,7 @@ def _load_eval_frame(
 ) -> pd.DataFrame:
     df = pd.read_csv(path)
     if apply_model_group_filter_flag:
-        df = filter_by_model_group(df)
+        df = df.copy()
     df = _apply_text_filter(df, only_with_vignette_text, text_vignette_ids, path)
     return df
 

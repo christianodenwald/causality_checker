@@ -1,89 +1,60 @@
 from pathlib import Path
-import sys
-
-project_root = Path(__file__).resolve().parents[1]
-if str(project_root) not in sys.path:
-	sys.path.insert(0, str(project_root))
-
-from src.main import load_vignettes, load_queries
-from src.helpers import load_other_models_group_map
 
 import pandas as pd
 
+
 data_dir = Path(__file__).resolve().parent
-vignettes = load_vignettes(data_dir / 'vignettes.csv', data_dir / 'variables.csv')
-queries = load_queries(data_dir / 'queries.csv')
+vignettes = pd.read_csv(data_dir / "vignettes.csv")
+models = pd.read_csv(data_dir / "models.csv")
+queries = pd.read_csv(data_dir / "queries.csv")
 
-# Load model group map for deduplication
-model_group_map = load_other_models_group_map(data_dir / 'vignettes.csv')
 
-# Calculate vignette statistics
-total_vignettes = len(vignettes)
-vignettes_with_nl = len([v for v in vignettes.values() if v.vignette_text is not None])
+def non_empty(series: pd.Series) -> pd.Series:
+    return series.fillna("").astype(str).str.strip().ne("")
 
-# Deduplicated: keep only one per model group
-unique_groups = len(set(model_group_map.values()))
-unique_groups_with_nl = len(set(
-    model_group_map[v_id] 
-    for v_id in model_group_map 
-    if v_id in vignettes and vignettes[v_id].vignette_text is not None
-))
 
-# Calculate query statistics
-total_queries = len(queries)
-queries_with_nl = len([q for q in queries if q.v_id in vignettes and vignettes[q.v_id].vignette_text is not None])
+vignette_ids_with_nl = set(vignettes.loc[non_empty(vignettes["vignette_text"]), "v_id"])
+models_with_nl = models[models["vignette_id"].isin(vignette_ids_with_nl)]
 
-# Deduplicated queries (select one representative vignette per model_group)
-# Select a representative vignette id for each model_group (prefer one that
-# actually appears in the queries list) and count the queries for that
-# representative. This mirrors how analysis selects a single model per group.
-from collections import defaultdict
-group_to_vids = defaultdict(list)
-for vid, grp in model_group_map.items():
-    group_to_vids[grp].append(vid)
+# The benchmark selects the best-performing model for each vignette. The
+# selection does not affect its size because alternative models for a vignette
+# have matching total and NL query counts.
+query_stats_by_model = (
+    queries.assign(has_nl=non_empty(queries["query_text"]))
+    .groupby("model_id", as_index=True)
+    .agg(query_count=("model_id", "size"), nl_query_count=("has_nl", "sum"))
+)
 
-rep_counts = 0
-rep_counts_nl = 0
-for grp, vids in group_to_vids.items():
-    vids_in_queries = [v for v in vids if any(q.v_id == v for q in queries)]
-    rep = vids_in_queries[0] if vids_in_queries else vids[0]
-    q_count = sum(1 for q in queries if q.v_id == rep)
-    rep_counts += q_count
-    if rep in vignettes and vignettes[rep].vignette_text is not None:
-        rep_counts_nl += q_count
+model_stats = models[["v_id", "vignette_id"]].copy()
+model_stats = model_stats.join(query_stats_by_model, on="v_id")
+model_stats[["query_count", "nl_query_count"]] = (
+    model_stats[["query_count", "nl_query_count"]].fillna(0).astype(int)
+)
 
-unique_query_groups = rep_counts
-unique_query_groups_with_nl = rep_counts_nl
+counts_per_vignette = model_stats.groupby("vignette_id")[["query_count", "nl_query_count"]].nunique()
+inconsistent_vignettes = counts_per_vignette[(counts_per_vignette > 1).any(axis=1)].index.tolist()
+if inconsistent_vignettes:
+    raise ValueError(
+        "Benchmark query count depends on which model is selected for: "
+        + ", ".join(inconsistent_vignettes)
+    )
 
-# Build a single combined table with vignette and query metrics
-metrics = [
-    'Total',
-    'With NL description',
-    'Unique (deduplicated)',
-    'Unique + NL',
-]
+benchmark_stats = model_stats.groupby("vignette_id")[["query_count", "nl_query_count"]].first()
 
-vignette_counts = [
-    total_vignettes,
-    vignettes_with_nl,
-    unique_groups,
-    unique_groups_with_nl,
-]
-
-query_counts = [
-    total_queries,
-    queries_with_nl,
-    unique_query_groups,
-    unique_query_groups_with_nl,
-]
-
-combined = pd.DataFrame({
-    'Metric': metrics,
-    'Vignettes': vignette_counts,
-    'Queries': query_counts,
-})
+summary = pd.DataFrame(
+    [
+        {
+            "Vignettes (NL)": f"{len(vignettes)} ({len(vignette_ids_with_nl)})",
+            "Models (NL)": f"{len(models)} ({len(models_with_nl)})",
+            "Benchmark queries (NL)": (
+                f"{int(benchmark_stats['query_count'].sum())} "
+                f"({int(benchmark_stats['nl_query_count'].sum())})"
+            ),
+        }
+    ]
+)
 
 print("=" * 60)
 print("DATASET STATISTICS")
 print("=" * 60)
-print(combined.to_string(index=False))
+print(summary.to_string(index=False))

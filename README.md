@@ -80,9 +80,10 @@ If running this script for an OpenAI model, ensure the openai package is availab
 
 ## Data
 
-- `data/vignettes.csv`: vignettes with natural language text, variables, and context values
+- `data/vignettes.csv`: deduplicated vignette text plus vignette-level descriptions
+- `data/models.csv`: SCM/formalization rows linked to `vignettes.csv`
 - `data/variables.csv`: structural equations and ranges per variable
-- `data/queries.csv`: cause-effect queries with ground-truth labels (intuition, HP05, HP15, etc.)
+- `data/queries.csv`: model-specific cause-effect queries with ground-truth labels (intuition, HP05, HP15, etc.)
 - `data/VERSION.md`: manual data version and change log
 - `outputs/`: evaluation results saved as `causality_results_{theory/model}_{gt}_{scope}.csv`
 
@@ -108,9 +109,38 @@ python tools/add_vignettes_from_json.py --json data/new_vignettes_template.json
 
 This appends entries to:
 - `data/vignettes.csv`
+- `data/models.csv`
 - `data/variables.csv`
 - `data/queries.csv`
 
-<!-- ## Citation
+## Data Version History
 
-Please cite the accompanying paper when using this code or dataset. -->
+| Version | Date | Commit | Vignettes (NL) | Models (NL) | Benchmark queries (NL) |
+|---|---|---|---:|---:|---:|
+| v1.1 | 2026-09-18 | CURRENT | 54 (48) | 58 (52) | 133 (117) |
+| v1.0 | 2026-04-29 | 7ac901e | 53 (47) | 58 (52) | 128 (112) |
+
+### Changelog
+#### v1.1
+- Separated vignette-level (`vignettes.csv`) content from SCM model (`models.csv`) definitions.
+- Counted `rock_bottle` and `rock_bottle_time` as distinct vignettes because they have different narrative texts, thereby increasing the benchmark from 53 to 54 vignettes and from 128 to 133 queries.
+- The underlying dataset remains unchanged at 58 models and 149 stored queries.
+
+#### v1.0
+- Version that the evaluation in the original paper was performed on.
+- 58 vignettes, 149 queries total. NL, deduplicated, and deduplicated+NL version available.
+
+
+# Citation
+Please cite as:
+
+```
+@inproceedings{dataset,
+  title = {A Comprehensive Collection of Vignettes for Actual Causation},
+  author = {Odenwald, Christian},
+  booktitle = {Fifth Conference on Causal Learning and Reasoning},
+  year = {2026},
+  url = {https://openreview.net/forum?id=BzcZ6URrXz},
+}
+```
+

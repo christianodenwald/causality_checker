@@ -9,9 +9,10 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
 
-VIGNETTE_REQUIRED = ["v_id", "se_id", "vignette_text", "variable_order", "context", "title"]
+VIGNETTE_REQUIRED = ["v_id", "vignette_text", "title"]
+MODEL_REQUIRED = ["v_id", "vignette_id", "se_id", "variable_order", "context"]
 VARIABLE_REQUIRED = ["se_id", "variable_name", "range", "structural_equation"]
-QUERY_REQUIRED = ["v_id", "cause", "effect", "query_text"]
+QUERY_REQUIRED = ["model_id", "cause", "effect", "query_text"]
 
 
 def _load_csv(path: Path) -> pd.DataFrame:
@@ -37,20 +38,27 @@ def _build_vignette_row(vignette: Dict[str, Any], columns: List[str]) -> Dict[st
 
     row = {col: "" for col in columns}
     row["v_id"] = str(vignette.get("v_id", "")).strip()
-    row["se_id"] = str(vignette.get("se_id", "")).strip()
     row["vignette_text"] = _as_csv_cell(vignette.get("vignette_text"))
-    row["variable_order"] = _as_csv_cell(vignette.get("variable_order"))
-    row["context"] = _as_csv_cell(vignette.get("context"))
     row["title"] = _as_csv_cell(vignette.get("title"))
 
     for col in columns:
-        if col in {"v_id", "se_id", "vignette_text", "variable_order", "context", "title"}:
+        if col in {"v_id", "vignette_text", "title"}:
             continue
         if col in metadata:
             row[col] = _as_csv_cell(metadata[col])
         elif col in vignette:
             row[col] = _as_csv_cell(vignette[col])
 
+    return row
+
+
+def _build_model_row(vignette: Dict[str, Any], vignette_id: str, columns: List[str]) -> Dict[str, str]:
+    row = {col: "" for col in columns}
+    row["v_id"] = str(vignette.get("v_id", "")).strip()
+    row["vignette_id"] = vignette_id
+    row["se_id"] = str(vignette.get("se_id", "")).strip()
+    row["variable_order"] = _as_csv_cell(vignette.get("variable_order"))
+    row["context"] = _as_csv_cell(vignette.get("context"))
     return row
 
 
@@ -68,13 +76,15 @@ def _build_variable_rows(se_id: str, variables: List[Dict[str, Any]], columns: L
     return rows
 
 
-def _build_query_rows(v_id: str, queries: List[Dict[str, Any]], columns: List[str]) -> List[Dict[str, str]]:
+def _build_query_rows(model_id: str, queries: List[Dict[str, Any]], columns: List[str]) -> List[Dict[str, str]]:
     rows: List[Dict[str, str]] = []
     for query in queries:
         row = {col: "" for col in columns}
-        row["v_id"] = v_id
+        row["model_id"] = model_id
+        if "v_id" in columns:
+            row["v_id"] = model_id
         for col in columns:
-            if col == "v_id":
+            if col in {"model_id", "v_id"}:
                 continue
             if col in query:
                 row[col] = _as_csv_cell(query[col])
@@ -85,11 +95,13 @@ def _build_query_rows(v_id: str, queries: List[Dict[str, Any]], columns: List[st
 def _validate_new_vignette(
     vignette: Dict[str, Any],
     existing_v_ids: set,
+    existing_vignette_texts: Dict[str, str],
     existing_se_ids: set,
     new_v_ids: set,
     new_se_ids: set,
 ) -> None:
     v_id = str(vignette.get("v_id", "")).strip()
+    vignette_text = str(vignette.get("vignette_text", "")).strip()
     se_id = str(vignette.get("se_id", "")).strip()
     variables = vignette.get("variables", [])
     queries = vignette.get("queries", [])
@@ -100,6 +112,8 @@ def _validate_new_vignette(
         raise ValueError(f"Vignette '{v_id}' must have a non-empty 'se_id'.")
     if v_id in existing_v_ids or v_id in new_v_ids:
         raise ValueError(f"Duplicate vignette id found: '{v_id}'.")
+    if not vignette_text:
+        raise ValueError(f"Vignette '{v_id}' must have a non-empty 'vignette_text'.")
 
     if not isinstance(vignette.get("variable_order", []), list):
         raise ValueError(f"Vignette '{v_id}': 'variable_order' must be a list.")
@@ -175,23 +189,32 @@ def add_new_vignettes_from_json(
         raise ValueError("JSON file must contain a top-level 'vignettes' list.")
 
     vignettes_csv = data_dir / "vignettes.csv"
+    models_csv = data_dir / "models.csv"
     variables_csv = data_dir / "variables.csv"
     queries_csv = data_dir / "queries.csv"
 
     vignettes_df = _load_csv(vignettes_csv)
+    models_df = _load_csv(models_csv)
     variables_df = _load_csv(variables_csv)
     queries_df = _load_csv(queries_csv)
 
     _validate_columns(vignettes_df, VIGNETTE_REQUIRED, "vignettes.csv")
+    _validate_columns(models_df, MODEL_REQUIRED, "models.csv")
     _validate_columns(variables_df, VARIABLE_REQUIRED, "variables.csv")
     _validate_columns(queries_df, QUERY_REQUIRED, "queries.csv")
 
-    existing_v_ids = set(vignettes_df["v_id"].astype(str).str.strip())
+    existing_v_ids = set(models_df["v_id"].astype(str).str.strip())
+    existing_vignette_texts = {
+        str(row["vignette_text"]).strip(): str(row["v_id"]).strip()
+        for _, row in vignettes_df.iterrows()
+        if str(row["vignette_text"]).strip()
+    }
     existing_se_ids = set(variables_df["se_id"].astype(str).str.strip())
     new_v_ids: set = set()
     new_se_ids: set = set()
 
     vignette_rows: List[Dict[str, str]] = []
+    model_rows: List[Dict[str, str]] = []
     variable_rows: List[Dict[str, str]] = []
     query_rows: List[Dict[str, str]] = []
 
@@ -199,14 +222,28 @@ def add_new_vignettes_from_json(
         if not isinstance(vignette, dict):
             raise ValueError("Each vignette entry must be an object.")
 
-        _validate_new_vignette(vignette, existing_v_ids, existing_se_ids, new_v_ids, new_se_ids)
+        _validate_new_vignette(
+            vignette,
+            existing_v_ids,
+            existing_vignette_texts,
+            existing_se_ids,
+            new_v_ids,
+            new_se_ids,
+        )
 
         v_id = str(vignette["v_id"]).strip()
         se_id = str(vignette["se_id"]).strip()
         variables = vignette.get("variables", [])
         queries = vignette.get("queries", [])
+        vignette_text = str(vignette.get("vignette_text", "")).strip()
 
-        vignette_rows.append(_build_vignette_row(vignette, list(vignettes_df.columns)))
+        vignette_id = existing_vignette_texts.get(vignette_text, v_id)
+
+        if vignette_text not in existing_vignette_texts:
+            vignette_rows.append(_build_vignette_row(vignette, list(vignettes_df.columns)))
+            existing_vignette_texts[vignette_text] = vignette_id
+
+        model_rows.append(_build_model_row(vignette, vignette_id, list(models_df.columns)))
         if variables:
             variable_rows.extend(_build_variable_rows(se_id, variables, list(variables_df.columns)))
             new_se_ids.add(se_id)
@@ -220,6 +257,10 @@ def add_new_vignettes_from_json(
         [vignettes_df, pd.DataFrame(vignette_rows, columns=vignettes_df.columns)],
         ignore_index=True,
     )
+    updated_models = pd.concat(
+        [models_df, pd.DataFrame(model_rows, columns=models_df.columns)],
+        ignore_index=True,
+    )
     updated_variables = pd.concat(
         [variables_df, pd.DataFrame(variable_rows, columns=variables_df.columns)],
         ignore_index=True,
@@ -231,6 +272,7 @@ def add_new_vignettes_from_json(
 
     if not dry_run:
         updated_vignettes.to_csv(vignettes_csv, index=False)
+        updated_models.to_csv(models_csv, index=False)
         updated_variables.to_csv(variables_csv, index=False)
         updated_queries.to_csv(queries_csv, index=False)
 
@@ -244,7 +286,7 @@ def add_new_vignettes_from_json(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Add new vignettes from a JSON file into data/vignettes.csv, data/variables.csv, and data/queries.csv."
+        description="Add new vignettes from a JSON file into data/vignettes.csv, data/models.csv, data/variables.csv, and data/queries.csv."
     )
     parser.add_argument(
         "--json",
@@ -254,7 +296,7 @@ def main() -> None:
     parser.add_argument(
         "--data-dir",
         default=str(DEFAULT_DATA_DIR),
-        help="Directory containing vignettes.csv, variables.csv, and queries.csv.",
+        help="Directory containing vignettes.csv, models.csv, variables.csv, and queries.csv.",
     )
     parser.add_argument(
         "--dry-run",

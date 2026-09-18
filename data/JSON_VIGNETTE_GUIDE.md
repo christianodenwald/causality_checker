@@ -34,16 +34,21 @@ Your file must contain a top-level key called `vignettes` with a list:
 ## Vignette Fields
 
 Required fields:
-- `v_id`: unique vignette identifier (string). Must not already exist in `data/vignettes.csv`.
-- `se_id`: setting/equation system id (string). Note: some vignettes can share the same structural equations but differ in the context values
+- `v_id`: unique model identifier (string). Must not already exist in `data/models.csv`.
+- `se_id`: setting/equation system id (string). Note: some models can share the same structural equations but differ in the context values.
 - `title`: short label for the vignette. Merely for aesthetics.
-- `vignette_text`: natural language scenario text. Needed for LLM evaluation.
+- `vignette_text`: natural language scenario text. Needed for LLM evaluation and for deduplicating `data/vignettes.csv`.
 - `variable_order`: ordered list of variable names. Note: some vignettes do not have a unique order, but that doesn't matter. The only requirement is that all parent variables are set before the child variable is evaluated.
 - `context`: list of values aligned with `variable_order`. Depending on the length of this list, this will set the context (explanation below).
 
 Optional fields:
 - `metadata`: object for additional vignette columns such as:
-  - `other_names`, `description`, `origin`, `taken_from`, `equivalent_to`, `other_models`, `similar`, `notes`
+  - `other_names`, `description`, `origin`, `taken_from`, `equivalent_to`, `similar`, `notes`
+
+When imported:
+- `data/vignettes.csv` stores the deduplicated vignette text and vignette-level metadata.
+- `data/models.csv` stores one formalization row per vignette/model, with a foreign key back to `data/vignettes.csv`.
+- `data/queries.csv` continues to store the model-specific queries keyed by model id.
 
 ### Important: `variable_order` and `context`
 
@@ -146,7 +151,7 @@ You can add multiple entries by adding more objects to `vignettes`:
 ## Final Checklist Before Import
 
 - JSON is valid (no trailing commas, balanced braces/brackets).
-- `v_id` values are unique.
+- `v_id` values are unique across `data/models.csv`.
 - `se_id` usage is consistent with `variables`.
 - `variable_order` and `context` are aligned.
 - Each vignette has at least one query.

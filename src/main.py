@@ -788,10 +788,16 @@ if __name__ == "__main__":
     # disagreements_HP2005 = all_HP2005[all_HP2005['agreement'] == False]
     # disagreements_HP2015 = all_HP2015[all_HP2015['agreement'] == False]
 
-    # revisions
-    # HP2005 = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip, save=True)
-    HP2015 = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip=skip, save=True)
-    # HP2005_norm = evaluate_all_queries(vignettes, queries, theory='HP2005', gt='intuition', skip=skip, save=True, normality=True)
-    # HP2015_norm = evaluate_all_queries(vignettes, queries, theory='HP2015', gt='intuition', skip=skip, save=True, normality=True)
+    # Select the theory implementations to run. Use either one or both names.
+    theories_to_run = ['gallow', 'gallow_productive']
+    for theory in theories_to_run:
+        evaluate_all_queries(
+            vignettes,
+            queries,
+            theory=theory,
+            gt='intuition',
+            skip=skip,
+            save=True,
+        )
 
 print()

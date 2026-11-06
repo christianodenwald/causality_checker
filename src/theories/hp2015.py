@@ -38,7 +38,7 @@ def evaluate_hp2015(
 
     cause_alternatives = []
     for cause_variable, cause_value in zip(cause_variables, cause_values):
-        alternatives = [val for val in vignette.ranges[cause_variable] if val != cause_value]
+        alternatives = list(vignette.ranges[cause_variable])
         if not alternatives:
             return {
                 "terminal": True,
@@ -52,6 +52,8 @@ def evaluate_hp2015(
     witness_str: Optional[str] = None
 
     for x_primes in itertools.product(*cause_alternatives):
+        if all(x_prime == cause_value for x_prime, cause_value in zip(x_primes, cause_values)):
+            continue
         non_cause_vars = set(vignette.variables) - set(cause_variables)
         for subset_w in _powerset(non_cause_vars):
             vignette.reset_values()
